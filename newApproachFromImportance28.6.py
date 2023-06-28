@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 
 def f(x):
     return (np.sin(x) + 1) / 2
-def df(x):
-    return 0.5*np.cos(x)
-
 if __name__ == '__main__':
     # 1. Define observed inputs
     x = np.array([[1], [2]])
@@ -16,38 +13,28 @@ if __name__ == '__main__':
     y = f(x)
     print("Calculated observed function values at the observed inputs. y:", y)
 
-    # 3. Define observed derivative values
-    dy = np.array(df(x))
-    print("Calculated derivative of the function at the observed inputs. dy:", dy)
+    # 3. Stack x and y
+    X = x  # Use x as-is
+    Y = y
+    print("Stacked inputs and outputs for function values. X:", X, "Y:", Y)
 
-    # Introduce the hyperparameters for controlling the influence of the derivative information
-    derivative_scale = 1  # Change this to any value to control the influence of the derivative information
-    derivative_length = 1  # Change this to any value to control the "reach" of the derivative information
-    dy_scaled = dy * derivative_scale
-    print("Scaled the derivative values by the hyperparameter. dy_scaled:", dy_scaled)
+    # 4. Define which are values
+    D = np.zeros_like(x)
+    print("Defined an indicator matrix D to specify which outputs are function values. D:", D)
 
-    # 4. Stack x, y and dy_scaled, while extending x with the derivative length for dy_scaled
-    X = np.vstack([x, x + derivative_length])  # Stack x on itself for function and derivative values
-    Y = np.vstack([y, dy_scaled])  # Stack y and dy_scaled
-    print("Stacked inputs and outputs for both function values and derivative values. X:", X, "Y:", Y)
-
-    # 5. Define which are values and which are derivatives
-    D = np.vstack([np.zeros_like(x), np.ones_like(x)])
-    print("Defined an indicator matrix D to specify which outputs are function values and which are derivatives. D:", D)
-
-    # 6. Specify input_dim (1) and variance (1) for the RBF kernel
-    k = GPy.kern.RBF(2, variance=1)  # Changed input_dim from 1 to 2
+    # 5. Specify input_dim (1) and variance (1) for the RBF kernel
+    k = GPy.kern.RBF(1, variance=1)
     print("Defined the kernel to be used in the Gaussian Process.")
 
-    # 7. Concatenate X and D to form the new input
+    # 6. Concatenate X and D to form the new input
     X_new = np.hstack((X, D))
     print("Concatenated the inputs and the D matrix to form the new inputs to the Gaussian Process. X_new:", X_new)
 
-    # 8. Build GP model
-    model = GPy.models.GPRegression(X_new, Y, k)
-    print("Built the Gaussian Process model with the specified inputs, outputs, and kernel.")
+    # 7. Build GP model with zero noise variance
+    model = GPy.models.GPRegression(X_new, Y, k, noise_var=0.0)
+    print("Built the Gaussian Process model with the specified inputs, outputs, kernel, and zero noise variance.")
 
-    # 9. Optimize the model
+    # 8. Optimize the model
     model.optimize()
     print("Optimized the parameters of the Gaussian Process model.")
 
@@ -88,18 +75,9 @@ if __name__ == '__main__':
     plt.scatter(x, y, color='r', label='Sampled points')
     print("Plotted the sampled points and their corresponding function values.")
 
-    # Draw the arrow for derivative
-    for i in range(x.shape[0]):
-        tangent_direction = np.array([1, dy[i, 0]]) / np.linalg.norm([1, dy[i, 0]])
-        arrow_end = [x[i, 0] + 0.2 * tangent_direction[0],
-                     f(x[i, 0]) + 0.2 * tangent_direction[1]]
-        plt.arrow(x[i, 0], f(x[i, 0]), 0.2 * tangent_direction[0], 0.2 * tangent_direction[1],
-                  facecolor='green', edgecolor='green', head_width=0.05, head_length=0.1)
-        print(f"Drawn tangent arrow at x = {x[i, 0]} to represent derivative.")
-
     plt.xlabel('x')
     plt.ylabel('f(x)')
-    plt.title('Gaussian Process Regression and Derivatives')
+    plt.title('Gaussian Process Regression')
     plt.legend()
     plt.ylim(0, 1)  # Set y-axis limits to 0 and 1
     plt.grid(True)
