@@ -19,6 +19,10 @@ def kernel(a, b, l=1.0):
 def f(x):
     return (np.sin(x) + 1) / 2
 
+
+
+
+
 def predict_and_plot(x_train, y_train, x_test, kernel, f):
     K = np.zeros((len(x_train), len(x_train)))
     for i in range(len(x_train)):
@@ -44,6 +48,7 @@ def predict_and_plot(x_train, y_train, x_test, kernel, f):
     plt.xlabel('$x$')
     plt.ylabel('$f(x)$')
     plt.legend(loc='upper left')
+    plt.title("No offset")
     plt.show()
 
     return mu_star, var_star
