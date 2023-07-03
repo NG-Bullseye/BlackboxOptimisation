@@ -20,6 +20,8 @@ def f(x):
     return (np.sin(x) + 1) / 2
 
 QUANTIZATION_FACTOR = 2
+def x_discrete(x):
+    return np.round(x * (QUANTIZATION_FACTOR*10)) / (QUANTIZATION_FACTOR*10)
 
 def f_discrete(x):
     x = np.round(x * (QUANTIZATION_FACTOR*10)) / (QUANTIZATION_FACTOR*10)
@@ -96,10 +98,12 @@ OFFSET_RANGE=1
 OFFSET_SCALE=1
 n_iterations = 0
 np.random.seed(42)
-x_train = np.random.uniform(0, 10, 1).reshape(-1, 1)
+INTERVAL=10
+x_train = x_discrete(  np.random.uniform(0, INTERVAL, 2).reshape(-1, 1))
 
 y_train = f_discrete(x_train)
-x_test = np.linspace(0, 10, 10).reshape(-1, 1)
+
+x_test = x_discrete( np.linspace(0, INTERVAL,np.round(INTERVAL/QUANTIZATION_FACTOR )).reshape(-1, 1))
 
 # predict and plot before the loop
 mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f,offset_range=OFFSET_RANGE,offset_scale=OFFSET_SCALE)
