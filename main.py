@@ -21,10 +21,9 @@ def f(x):
 
 QUANTIZATION_FACTOR = 2
 def x_discrete(x):
-    return np.round(x * (QUANTIZATION_FACTOR*10)) / (QUANTIZATION_FACTOR*10)
+    return np.round(x / QUANTIZATION_FACTOR) * QUANTIZATION_FACTOR
 
 def f_discrete(x):
-    x = np.round(x * (QUANTIZATION_FACTOR*10)) / (QUANTIZATION_FACTOR*10)
     return f(x)
 
 def offset_scalar(x):
@@ -96,21 +95,21 @@ def predict_and_plot(x_train, y_train, x_test, kernel, f, offset_range=3.0, offs
 
 OFFSET_RANGE=1
 OFFSET_SCALE=1
-n_iterations = 0
+n_iterations = 2
 np.random.seed(42)
 INTERVAL=10
 x_train = x_discrete(  np.random.uniform(0, INTERVAL, 2).reshape(-1, 1))
 
 y_train = f_discrete(x_train)
 
-x_test = x_discrete( np.linspace(0, INTERVAL,np.round(INTERVAL/QUANTIZATION_FACTOR )).reshape(-1, 1))
+x_test = np.linspace(0, INTERVAL, 100).reshape(-1, 1)
 
 # predict and plot before the loop
 mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f,offset_range=OFFSET_RANGE,offset_scale=OFFSET_SCALE)
 
 for iteration in range(n_iterations):
     EI = expected_improvement(x_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
-    x_next = x_test[np.argmax(EI)]
+    x_next = x_discrete(x_test[np.argmax(EI)])
     y_next = f_discrete(x_next)
     x_train = np.vstack((x_train, x_next))
     y_train = np.vstack((y_train, y_next))
