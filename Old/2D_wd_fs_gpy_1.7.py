@@ -83,23 +83,23 @@ for i in range(SAMPELS):  # Perform 5 steps of BO
     new_y = f_discrete(new_x)
     x_samples = np.vstack([x_samples, new_x])
     y_samples = np.append(y_samples, new_y)
+if __name__ == '__main__':
+    gp.fit(x_samples, y_samples)
+    # Plot the function, the prediction and the samples
+    plt.figure(figsize=(20, 10))
+    plt.plot(x_space, f_discrete(x_space), 'r:', label=r'$f(x) = -x^2$')
+    plt.plot(x_samples, y_samples, 'r.', markersize=10, label='Observations')
 
-gp.fit(x_samples, y_samples)
-# Plot the function, the prediction and the samples
-plt.figure(figsize=(20, 10))
-plt.plot(x_space, f_discrete(x_space), 'r:', label=r'$f(x) = -x^2$')
-plt.plot(x_samples, y_samples, 'r.', markersize=10, label='Observations')
+    # Predict using the GP model
+    y_pred, sigma = gp.predict(x_space, return_std=True)
 
-# Predict using the GP model
-y_pred, sigma = gp.predict(x_space, return_std=True)
+    plt.plot(x_space, y_pred, 'b-', label='Prediction')
+    plt.fill(np.concatenate([x_space, x_space[::-1]]),
+             np.concatenate([y_pred - 1.96 * sigma, (y_pred + 1.96 * sigma)[::-1]]),
+             alpha=.5, fc='b', ec='None', label='95% confidence interval')
 
-plt.plot(x_space, y_pred, 'b-', label='Prediction')
-plt.fill(np.concatenate([x_space, x_space[::-1]]),
-         np.concatenate([y_pred - 1.96 * sigma, (y_pred + 1.96 * sigma)[::-1]]),
-         alpha=.5, fc='b', ec='None', label='95% confidence interval')
+    plt.xlabel('$x$')
+    plt.ylabel('$f(x)$')
+    plt.legend(loc='upper right')
 
-plt.xlabel('$x$')
-plt.ylabel('$f(x)$')
-plt.legend(loc='upper right')
-
-plt.show()
+    plt.show()

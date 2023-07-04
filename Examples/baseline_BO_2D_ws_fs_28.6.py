@@ -19,10 +19,6 @@ def kernel(a, b, l=1.0):
 def f(x):
     return (np.sin(x) + 1) / 2
 
-
-
-
-
 def predict_and_plot(x_train, y_train, x_test, kernel, f):
     K = np.zeros((len(x_train), len(x_train)))
     for i in range(len(x_train)):
@@ -52,24 +48,24 @@ def predict_and_plot(x_train, y_train, x_test, kernel, f):
     plt.show()
 
     return mu_star, var_star
+if __name__ == '__main__':
+    n_iterations = 0
+    np.random.seed(42)
+    x_train = np.random.uniform(0, 10, 1).reshape(-1, 1)
+    y_train = f(x_train)
+    x_test = np.linspace(0, 10, 1000).reshape(-1, 1)
 
-n_iterations = 0
-np.random.seed(42)
-x_train = np.random.uniform(0, 10, 1).reshape(-1, 1)
-y_train = f(x_train)
-x_test = np.linspace(0, 10, 1000).reshape(-1, 1)
-
-# predict and plot before the loop
-mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f)
-
-for iteration in range(n_iterations):
-    EI = expected_improvement(x_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
-    x_next = x_test[np.argmax(EI)]
-    y_next = f(x_next)
-    x_train = np.vstack((x_train, x_next))
-    y_train = np.vstack((y_train, y_next))
-    print(f"Iteration {iteration+1}: x_next = {x_next[0]}, y_next = {y_next[0]}")
-
-    # predict and plot after each iteration
+    # predict and plot before the loop
     mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f)
+
+    for iteration in range(n_iterations):
+        EI = expected_improvement(x_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
+        x_next = x_test[np.argmax(EI)]
+        y_next = f(x_next)
+        x_train = np.vstack((x_train, x_next))
+        y_train = np.vstack((y_train, y_next))
+        print(f"Iteration {iteration+1}: x_next = {x_next[0]}, y_next = {y_next[0]}")
+
+        # predict and plot after each iteration
+        mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f)
 

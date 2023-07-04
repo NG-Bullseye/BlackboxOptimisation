@@ -92,28 +92,28 @@ def predict_and_plot(x_train, y_train, x_test, kernel, f, offset_range=3.0, offs
 
     return mu_star, var_star
 
+if __name__ == '__main__':
+    OFFSET_RANGE=1
+    OFFSET_SCALE=1
+    n_iterations = 0
+    np.random.seed(42)
+    INTERVAL=10
+    x_train = x_discrete(  np.random.uniform(0, INTERVAL, 2).reshape(-1, 1))
 
-OFFSET_RANGE=1
-OFFSET_SCALE=1
-n_iterations = 2
-np.random.seed(42)
-INTERVAL=10
-x_train = x_discrete(  np.random.uniform(0, INTERVAL, 2).reshape(-1, 1))
+    y_train = f_discrete(x_train)
 
-y_train = f_discrete(x_train)
+    x_test = np.linspace(0, INTERVAL, 100).reshape(-1, 1)
 
-x_test = np.linspace(0, INTERVAL, 100).reshape(-1, 1)
+    # predict and plot before the loop
+    mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f,offset_range=OFFSET_RANGE,offset_scale=OFFSET_SCALE)
 
-# predict and plot before the loop
-mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f,offset_range=OFFSET_RANGE,offset_scale=OFFSET_SCALE)
+    for iteration in range(n_iterations):
+        EI = expected_improvement(x_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
+        x_next = x_discrete(x_test[np.argmax(EI)])
+        y_next = f_discrete(x_next)
+        x_train = np.vstack((x_train, x_next))
+        y_train = np.vstack((y_train, y_next))
+        print(f"Iteration {iteration+1}: x_next = {x_next[0]}, y_next = {y_next[0]}")
 
-for iteration in range(n_iterations):
-    EI = expected_improvement(x_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
-    x_next = x_discrete(x_test[np.argmax(EI)])
-    y_next = f_discrete(x_next)
-    x_train = np.vstack((x_train, x_next))
-    y_train = np.vstack((y_train, y_next))
-    print(f"Iteration {iteration+1}: x_next = {x_next[0]}, y_next = {y_next[0]}")
-
-    # predict and plot after each iteration
-    mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f, offset_range=OFFSET_RANGE, offset_scale=OFFSET_SCALE)
+        # predict and plot after each iteration
+        mu_star, var_star = predict_and_plot(x_train, y_train, x_test, kernel, f, offset_range=OFFSET_RANGE, offset_scale=OFFSET_SCALE)
