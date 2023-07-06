@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+
 def plot_perturbation(x1_test, x2_test, mu, PERT_WIDTH, PERT_SCALE):
-    a = PERT_SCALE * gradient_scalar(mu.reshape(1, -1))
+    a = PERT_SCALE * gradient_vector(mu.reshape(1, -1))
     y_offset = 0
 
     X, Y = np.meshgrid(x1_test, x2_test)
@@ -41,14 +43,15 @@ def plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PER
     Z_pred = mu_star.reshape(100, 100)
 
     width = PERT_WIDTH
-    print(X_train[0,:])
-    a = PERT_SCALE * gradient_scalar(np.array(X_train[0,:]).reshape(1, -1))
+    print(X_train[0, :])
+    a = PERT_SCALE * gradient_vector(np.array(X_train[0, :]).reshape(1, -1)) #a is a vector in 3D now
     y_offset = 0
-    Z_perturbation = perturbation(np.dstack([X, Y]).reshape(-1, 2), np.array(X_train[0,:]), width, a,
+    Z_perturbation = perturbation(np.dstack([X, Y]).reshape(-1, 2), np.array(X_train[0, :]), width, a,
                                   y_offset).reshape(X.shape)
 
     fig = make_subplots(rows=1, cols=3,
-                        subplot_titles=("True Function", "Model's Prediction", f'Perturbation WIDTH={PERT_WIDTH}, SCALE={PERT_SCALE}'),
+                        subplot_titles=(
+                        "True Function", "Model's Prediction", f'Perturbation WIDTH={PERT_WIDTH}, SCALE={PERT_SCALE}'),
                         specs=[[{'type': 'surface'}, {'type': 'surface'}, {'type': 'surface'}]])
 
     fig.add_trace(
@@ -95,23 +98,28 @@ def expected_improvement(X, mu, sigma, xi=0.01):
         ei[sigma == 0.0] = 0.0
     return ei
 
+
 def kernel(a, b, l=1.0):
     sqdist = np.sum((a[:, None, :] - b[None, :, :]) ** 2, axis=-1)
     return np.exp(-.5 * (1 / l) * sqdist)
 
-def f(x):
-    return (np.sin(x[:, 0]) + np.sin(x[:, 1])) / 5+0.5
 
-def gradient_scalar(x):
-    gradient = np.array([-np.sin(xi[0]) / 5 - np.sin(xi[1]) / 5 for xi in x])
+def f(x):
+    return (np.sin(x[:, 0]) + np.sin(x[:, 1])) / 5 + 0.5
+
+
+def gradient_vector(x):
+    x1= [-np.sin(xi[0])  / 5 for xi in x]
+    x2 = [- np.sin(xi[1]) / 5 for xi in x]
+    gradient =np.array([x1,x2])
     norm = np.linalg.norm(gradient)
     unit_gradient = gradient / norm
     return unit_gradient
-
 def perturbation(x, mu, width, a, y_offset):
     perturbation = a * np.exp(-np.sum(((x - mu) / width) ** 2, axis=-1)) - \
                    a * np.exp(-np.sum(((x + mu) / width) ** 2, axis=-1)) + y_offset
     return perturbation.flatten()  # Flatten the result to be a 1D array
+
 
 def offset_function(x_train, x_test, derivative_scalar_func, PERT_WIDTH, PERT_SCALE):
     offsets = np.zeros((len(x_test), len(x_train)))
@@ -124,11 +132,13 @@ def offset_function(x_train, x_test, derivative_scalar_func, PERT_WIDTH, PERT_SC
             offsets[i][j] = perturbation(x, mu, width, a, y_offset)
     return offsets
 
+
 def offset_kernel(X_train, X_test, derivative_scalar_func, PERT_WIDTH, PERT_SCALE):
     offset_matrix = np.zeros((len(X_test), len(X_train)))
     for i in range(len(X_test)):
         offset_matrix[i, :] = offset_function(X_train, [X_test[i]], derivative_scalar_func, PERT_WIDTH, PERT_SCALE)
     return offset_matrix
+
 
 def predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=3.0, PERT_SCALE=1.0, USE_OFFSET=False):
     K = kernel(X_train, X_train)
@@ -136,7 +146,7 @@ def predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=3.0, PERT_SCALE=1.0, US
     print("\nShape of K:", K.shape, "First few elements:", K[:3, :3])
     print("Shape of K_star:", K_star.shape, "First few elements:", K_star[:3, :3])
     if USE_OFFSET:
-        offsetkernel = offset_kernel(X_train, X_test, gradient_scalar, PERT_WIDTH, PERT_SCALE)
+        offsetkernel = offset_kernel(X_train, X_test, gradient_vector, PERT_WIDTH, PERT_SCALE)
         mu_star = K_star @ np.linalg.inv(K) @ Y_train.flatten() + offsetkernel.flatten()
     else:
         mu_star = K_star @ np.linalg.inv(K) @ Y_train.flatten()
@@ -146,14 +156,15 @@ def predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=3.0, PERT_SCALE=1.0, US
 
     return mu_star, var_star
 
+
 if __name__ == '__main__':
-    PERT_WIDTH=1
-    PERT_SCALE=1
+    PERT_WIDTH = 1
+    PERT_SCALE = 1
     n_iterations = 0
     np.random.seed(42)
-    INTERVAL=10
+    INTERVAL = 10
 
-    X_train = np.array([[5,6]])#np.random.uniform(0, INTERVAL, size=(1, 2))
+    X_train = np.array([[5, 6]])  # np.random.uniform(0, INTERVAL, size=(1, 2))
     Y_train = f(X_train)
 
     x1_test = np.linspace(0, INTERVAL, 100)
@@ -162,9 +173,7 @@ if __name__ == '__main__':
 
     # predict before the loop
     mu_star, var_star = predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=PERT_WIDTH, PERT_SCALE=PERT_SCALE)
-    plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PERT_SCALE,INTERVAL=INTERVAL)
-    plot_gradient_at_train_points(X_train, f, ax=None)
-
+    plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PERT_SCALE, INTERVAL=INTERVAL)
 
     for iteration in range(n_iterations):
         EI = expected_improvement(X_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
