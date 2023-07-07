@@ -5,8 +5,9 @@
       <excludeFolder url="file://$MODULE_DIR$/GPy_venv" />
       <excludeFolder url="file://$MODULE_DIR$/finalEnv" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/myenv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.10 (BlackboxOptimisation)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.9 (myenv)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

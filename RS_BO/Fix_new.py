@@ -54,6 +54,11 @@ def plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PER
         go.Scatter3d(x=X_train[:, 0], y=X_train[:, 1], z=Y_train,
                      mode='markers', marker=dict(size=4, color='red')),
         row=1, col=3)
+    fig.add_trace(
+        go.Cone(x=X_train[:, 0], y=X_train[:, 1], z=np.zeros_like(Y_train),
+                u=gradients[:, 0], v=gradients[:, 1], w=np.zeros_like(gradients[:, 0]),
+                sizemode='scaled', sizeref=0.2, anchor='tail'),
+        row=1, col=3)
 
     fig.update_layout(height=800, width=1800,
                       scene=dict(xaxis_title='X Axis', yaxis_title='Y Axis', zaxis_title='Z Axis',
@@ -82,25 +87,34 @@ def kernel(a, b, l=1.0):
 def f(x):
     return (np.sin(x[:, 0]) + np.sin(x[:, 1])) / 5+0.5
 
-def gradient_vector(x):
-    x1 = -np.sin(x[0][0]) / 5
-    x2 = -np.sin(x[0][1]) / 5
-    gradient = np.array([x1, x2])
+def gradient_vector(x,GRADIENT_LENGTH=5):
+    x1 = -np.cos(x[0][0]) / 5
+    x2 = -np.cos(x[0][1]) / 5
+    gradient = np.array([x1, x2])*GRADIENT_LENGTH
+    gradient = np.array([1, 1])
     return gradient
 
 
-def perturbation(x, mu, width, a):
-    mu = mu.flatten()  # change mu's shape to (2,)
+def perturbation(x, mu, width, a):#
+    print("befor Shape of mu in perturbation: ", mu.shape)
+    #mu = mu.flatten()   change mu's shape to (2,)
     print("Shape of mu in perturbation: ", mu.shape)
-    perturbation = a * np.exp(-np.sum(((x - mu) / width) ** 2, axis=-1)) - \
-                   a * np.exp(-np.sum(((x + mu) / width) ** 2, axis=-1)) + 1
+    print(mu)
+    mu = np.array(mu)
+    print(mu)
+    mu = np.array([1, 2])
+    print(mu)
+    perturbation = a * np.exp(-np.sum(((x - mu) / width) ** 2, axis=-1))
     print("Shape of perturbation result: ", perturbation.shape)
     return perturbation
 
+
 def offset_function(x_train, x_test, gradient_vector_func, PERT_WIDTH, PERT_SCALE):
     # Calculate all offsets for all training points
+    print("hheheo")
+    print([ xt +gradient_vector_func(xt.reshape(1, -1))for xt in x_train])
     offsets = np.array([
-        perturbation(x_test, xt + PERT_SCALE * gradient_vector_func(xt.reshape(1, -1)), PERT_WIDTH, PERT_SCALE)
+        perturbation(x_test, xt + gradient_vector_func(xt.reshape(1, -1)), PERT_WIDTH, PERT_SCALE)
         for xt in x_train
     ])
     print("Shape of offsets in offset_function: ", offsets.shape)
@@ -123,7 +137,7 @@ def predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=3.0, PERT_SCALE=1.0, US
         print("Shape of K_star @ np.linalg.inv(K) @ Y_train.flatten(): ",
               (K_star @ np.linalg.inv(K) @ Y_train.flatten()).shape)
 
-        mu_star = K_star @ np.linalg.inv(K) @ Y_train.flatten() + offsetkernel.flatten()
+        mu_star = K_star @ np.linalg.inv(K) @ Y_train.flatten() * offsetkernel.flatten()
     else:
         mu_star = K_star @ np.linalg.inv(K) @ Y_train.flatten()
     var_star = np.diag(kernel(X_test, X_test) - K_star @ np.linalg.inv(K) @ K_star.T)
@@ -133,8 +147,8 @@ def predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=3.0, PERT_SCALE=1.0, US
     return mu_star, var_star
 
 if __name__ == '__main__':
-    PERT_WIDTH=1.5
-    PERT_SCALE=0.15
+    PERT_WIDTH=1
+    PERT_SCALE=0.3
     n_iterations = 0
     np.random.seed(42)
     INTERVAL=10
