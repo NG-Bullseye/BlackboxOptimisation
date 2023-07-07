@@ -10,7 +10,7 @@ def plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PER
     Z_true = f(np.dstack([X, Y]).reshape(-1, 2)).reshape(X.shape)
     Z_pred = mu_star.reshape(100, 100)
 
-    mu = X_train + PERT_SCALE * gradient_vector(X_train.reshape(1, -1))
+    mu = X_train +  gradient_vector(X_train.reshape(1, -1))
     width = PERT_WIDTH
     a = PERT_SCALE
     y_offset = 0
@@ -100,9 +100,8 @@ def perturbation(x, mu, width, a):#
     #mu = mu.flatten()   change mu's shape to (2,)
     print("Shape of mu in perturbation: ", mu.shape)
     print(mu)
-    mu = np.array(mu)
     print(mu)
-    mu = np.array([1, 2])
+    #mu = np.array([6, 7])
     print(mu)
     perturbation = a * np.exp(-np.sum(((x - mu) / width) ** 2, axis=-1))
     print("Shape of perturbation result: ", perturbation.shape)
@@ -112,7 +111,7 @@ def perturbation(x, mu, width, a):#
 def offset_function(x_train, x_test, gradient_vector_func, PERT_WIDTH, PERT_SCALE):
     # Calculate all offsets for all training points
     print("hheheo")
-    print([ xt +gradient_vector_func(xt.reshape(1, -1))for xt in x_train])
+    print([xt +gradient_vector_func(xt.reshape(1, -1))for xt in x_train])
     offsets = np.array([
         perturbation(x_test, xt + gradient_vector_func(xt.reshape(1, -1)), PERT_WIDTH, PERT_SCALE)
         for xt in x_train
