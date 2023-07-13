@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 
 def plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PERT_SCALE, INTERVAL):
     X, Y = np.meshgrid(x1_test, x2_test)
-    Z_true = f(np.dstack([X, Y]).reshape(-1, 2)).reshape(X.shape)
+    Z_true = f_discrete(np.dstack([X, Y]).reshape(-1, 2)).reshape(X.shape)
     Z_pred = mu_star.reshape(100, 100)
 
     mu = X_train +  gradient_vector(X_train.reshape(1, -1))
@@ -76,7 +76,7 @@ def expected_improvement(X, mu, sigma, xi=0.01):
     with np.errstate(divide='warn'):
         imp = mu - mu_sample_opt - xi
         Z = imp / sigma
-        ei = imp * norm.cdf(Z) + sigma * norm.pdf(Z)
+        ei = imp * norm.cdf_discrete(Z) + sigma * norm.pdf_discrete(Z)
         ei[sigma == 0.0] = 0.0
     return ei
 
@@ -84,7 +84,7 @@ def kernel(a, b, l=1.0):
     sqdist = np.sum((a[:, None, :] - b[None, :, :]) ** 2, axis=-1)
     return np.exp(-.5 * (1 / l) * sqdist)
 
-def f(x):
+def f_discrete(x):
     return (np.sin(x[:, 0]) + np.sin(x[:, 1])) / 5+0.5
 
 def gradient_vector(x,GRADIENT_LENGTH=5):
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     INTERVAL=10
 
     X_train = np.array([[5,6]])#np.random.uniform(0, INTERVAL, size=(1, 2))
-    Y_train = f(X_train)
+    Y_train = f_discrete(X_train)
 
     x1_test = np.linspace(0, INTERVAL, 100)
     x2_test = np.linspace(0, INTERVAL, 100)
@@ -161,14 +161,14 @@ if __name__ == '__main__':
 
     # predict before the loop
     mu_star, var_star = predict(X_train, Y_train, X_test, kernel, PERT_WIDTH=PERT_WIDTH, PERT_SCALE=PERT_SCALE)
-    plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f, PERT_WIDTH, PERT_SCALE,INTERVAL=INTERVAL)
+    plot_results(x1_test, x2_test, mu_star, X_train, Y_train, f_discrete, PERT_WIDTH, PERT_SCALE,INTERVAL=INTERVAL)
     #plot_gradient_at_train_points(X_train, f, ax=None)
 
 
     for iteration in range(n_iterations):
         EI = expected_improvement(X_test, mu_star.reshape(-1, 1), var_star.reshape(-1, 1), xi=0.01)
         X_next = X_test[np.argmax(EI)]
-        Y_next = f(X_next[None, :])
+        Y_next = f_discrete(X_next[None, :])
         X_train = np.vstack((X_train, X_next))
         Y_train = np.hstack((Y_train, Y_next))
 

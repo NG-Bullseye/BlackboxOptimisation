@@ -14,9 +14,7 @@ def expected_improvement(X, mu, sigma, xi=0.01):
     return ei
 
 def kernel(a, b, l=1.0):
-    sqdist = np.sum(a**2, 1).reshape(-1, 1) + np.sum(b**2, 1) - 2 * np.dot(a, b.T)
-    return np.exp(-0.5 * sqdist / l**2)
-
+    return np.exp(-0.5 * ((a - b)**2 / l**2))
 
 def f(x):
     return (np.sin(x) + 1) / 2
@@ -33,32 +31,52 @@ def offset_scalar(x):
 
 
 def perturbation(x, mu, width, a, y_offset):
-    return a * ((x[:, np.newaxis] - mu[np.newaxis, :]) / width) * np.exp(-((x[:, np.newaxis] - mu[np.newaxis, :]) / width) ** 2) + y_offset
+    perturbation = a * ((x - mu) / width) * np.exp(-((x - mu) / width) ** 2) + y_offset
+    return perturbation
+
+def offset_function(x_train, x_test, offset_scalar_func, offset_range, offset_scale):
+    offsets = np.zeros_like(x_test)
+
+    for i, x in enumerate(x_test):
+        for train_point in x_train:
+            mu = train_point
+            width = offset_range
+            a = offset_scale * offset_scalar_func(mu)
+            y_offset = 0
+            offsets[i] += perturbation(x, mu, width, a, y_offset)
+
+    return offsets
 
 
 def offset_kernel(x_train, x_test, offset_scalar_func, offset_range, offset_scale):
-    mu = x_train
-    width = offset_range
-    a = offset_scale * offset_scalar_func(mu)
-    y_offset = 0
-    offsets = perturbation(x_test, mu, width, a, y_offset)
-
     offset_scalar_all = offset_scalar_func(x_train)
     print("Offset scalar for all train points:", offset_scalar_all)
+    offset_matrix = np.zeros_like(x_test)
 
-    offset_matrix = offsets.sum(axis=1)
+    for i in range(len(x_test)):
+        offset_matrix[i] = offset_function(x_train, x_test[i], offset_scalar_func, offset_range, offset_scale)
+        #print(f"x_test[{i}]: {x_test[i]}, offset_matrix[{i}]: {offset_matrix[i]}")
+
     return offset_matrix
 
 
-
-
 def predict_and_plot(x_train, y_train, x_test, kernel, f, offset_range=3.0, offset_scale=1.0):
-    K = kernel(x_train, x_train)
-    K_star = kernel(x_test, x_train)
+    K = np.zeros((len(x_train), len(x_train)))
+    for i in range(len(x_train)):
+        for j in range(len(x_train)):
+            K[i, j] = kernel(x_train[i], x_train[j])
+    K_star = np.zeros((len(x_test), len(x_train)))
+    for i in range(len(x_test)):
+        for j in range(len(x_train)):
+            K_star[i, j] = kernel(x_test[i], x_train[j])
     offsetkernel = offset_kernel(x_train, x_test, offset_scalar, offset_range=offset_range, offset_scale=offset_scale)
+    jitter = 1e-6  # Small constant. You may adjust this value as per your needs.
+    K += np.eye(K.shape[0]) * jitter
     mu_star = K_star @ np.linalg.inv(K) @ y_train.flatten() + offsetkernel.flatten()
     print("mu_star:", mu_star)
-    var_star = np.diag(kernel(x_test, x_test) - K_star @ np.linalg.inv(K) @ K_star.T)
+    var_star = np.zeros(len(x_test))
+    for i in range(len(x_test)):
+        var_star[i] = kernel(x_test[i], x_test[i]) - K_star[i] @ np.linalg.inv(K) @ K_star[i].T
 
     plt.figure(figsize=(12, 8))
     plt.plot(x_test, f_discrete(x_test), 'r:', label=r'$f(x) = \frac{\sin(x) + 1}{2}$')
@@ -77,9 +95,9 @@ def predict_and_plot(x_train, y_train, x_test, kernel, f, offset_range=3.0, offs
     return mu_star, var_star
 
 if __name__ == '__main__':
-    OFFSET_RANGE=1
-    OFFSET_SCALE=1
-    n_iterations = 2
+    OFFSET_RANGE=0.2
+    OFFSET_SCALE=0.5
+    n_iterations = 15
     np.random.seed(42)
     INTERVAL=10
     x_train = x_discrete(  np.random.uniform(0, INTERVAL, 2).reshape(-1, 1))

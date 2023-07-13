@@ -1,5 +1,5 @@
 import numpy as np
-from protection import GaussianProcess
+from GaussianProcess_1D_rs_wd_fd_md import GaussianProcess
 import matplotlib.pyplot as plt
 from datetime import datetime
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     x_test = np.linspace(0, INTERVAL, 100).reshape(-1, 1)
 
-    gp = GaussianProcess(kernel, offset_scalar, offset_range=1, offset_scale=1, random_seed=42, quantization_factor=QUANTIZATION_FACTOR,INTERVAL=INTERVAL,protection_width=1)
+    gp = GaussianProcess(kernel, offset_scalar, offset_range=1, offset_scale=1, random_seed=42, quantization_factor=QUANTIZATION_FACTOR,INTERVAL=INTERVAL)
     gp.train(x_train, y_train)
     gp.optimize(x_test, f_discrete_counter, ITERATIONS)
     mu_star, var_star = gp.predict(x_test)

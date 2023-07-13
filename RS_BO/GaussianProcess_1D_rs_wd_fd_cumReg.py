@@ -19,6 +19,7 @@ class GaussianProcess:
 
     def predict(self, x_test):
         K = self.kernel_func(self.x_train, self.x_train)
+        K += 1e-6 * np.eye(K.shape[0])  # Add small noise to the diagonal
         K_star = self.kernel_func(x_test, self.x_train)
         offsetkernel = self._offset_kernel(x_test)
         self.mu_star = K_star @ np.linalg.inv(K) @ self.y_train.flatten() + offsetkernel.flatten()
@@ -55,14 +56,39 @@ class GaussianProcess:
     @staticmethod
     def _x_discrete(x, quantization_factor=2):
         return np.round(x / quantization_factor) * quantization_factor
+
     def optimize(self, x_test, f_discrete, n_iterations, xi=0.01):
+        best_y = np.max(self.y_train)  # The best function value found so far
+        cumulative_regret = 0  # The cumulative regret
         for iteration in range(n_iterations):
-            EI = self.expected_improvement(x_test, xi=xi)
-            x_next = self._x_discrete(x_test[np.argmax(EI)])
+            # Generate random points in the domain
+            n_random_points = 10000  # You can adjust this value
+            x_random = np.random.uniform(x_test.min(), x_test.max(), n_random_points).reshape(-1, 1)
+            x_random = self._x_discrete(x_random)  # discretize x_random
+
+            # Predict for the randomly generated points
+            self.predict(x_random)
+            EI_random = self.expected_improvement(x_random, xi=xi)
+
+            # Choose the next point with the highest EI
+            x_next = self._x_discrete(x_random[np.argmax(EI_random)])
+
             y_next = f_discrete(x_next)
+
+            # Add the new point to the training set
             self.x_train = np.vstack((self.x_train, x_next))
             self.y_train = np.vstack((self.y_train, y_next))
-            print(f"Iteration {iteration + 1}: x_next = {x_next[0]}, y_next = {y_next[0]}")
 
-            # predict after each iteration
+            # Update the best function value and the cumulative regret
+            if y_next > best_y:
+                best_y = y_next
+            regret = best_y - y_next
+            cumulative_regret += regret
+
+            print(
+                f"Iteration {iteration + 1}: x_next = {x_next[0]}, y_next = {y_next[0]}, regret = {regret}, cumulative regret = {cumulative_regret}")
+
+            # Predict with the updated training set
             self.predict(x_test)
+
+
