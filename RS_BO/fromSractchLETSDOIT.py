@@ -68,7 +68,7 @@ def predict(x_train, y_train, x_test, kernel, f, offset_range=3.0, offset_scale=
     jitter = 1e-6  # Small constant. You may adjust this value as per your needs.
     K += np.eye(K.shape[0]) * jitter
     mu_star = K_star @ np.linalg.inv(K) @ y_train.flatten() + offsetkernel.flatten()
-    print("mu_star:", mu_star)
+    #print("mu_star:", mu_star)
     var_star = np.zeros(len(x_test))
     for i in range(len(x_test)):
         var_star[i] = kernel(x_test[i], x_test[i]) - K_star[i] @ np.linalg.inv(K) @ K_star[i].T

@@ -1,5 +1,5 @@
 import numpy as np
-from protection import GaussianProcess
+from Custom_Gaussian import Optimization as opt
 import matplotlib.pyplot as plt
 from datetime import datetime
 
@@ -57,23 +57,35 @@ def benchmark(INTERVAL,ITERATIONS):
         print(f"The optimal value of f(x) is {optimal_fx}")
         print(f"Time taken: {time_taken}")
 
-if __name__ == '__main__':
-    ITERATIONS=5
-    INTERVAL=10
-    AMOUNT_OF_Initial_guesses=2
+def main():
     np.random.seed(42)
+    INTERVAL = 100
+    ITERATIONS = 3
+    optimizer = opt(n_iterations=ITERATIONS, quantization_factor=1, offset_range=5, offset_scale=0.1,
+                 kernel_scale=5, protection_width=1)
+    print("regret")
+    print(optimizer.get_cumulative_regret())
+    x_train = optimizer.x_discrete(np.random.uniform(0, INTERVAL, 1))
+    y_train = optimizer.f_discrete(x_train)
+    x_test = np.linspace(0, INTERVAL, 100)
+
+    x_train, y_train, mu_star, var_star = optimizer.optimize(x_train, y_train, x_test)
+
     benchmark(INTERVAL,ITERATIONS)
-    x_train = x_discrete(np.random.uniform(0, INTERVAL, AMOUNT_OF_Initial_guesses).reshape(-1, 1))
-    y_train = f_discrete(x_train)
-    #x_test = np.arange(0, INTERVAL + QUANTIZATION_FACTOR, QUANTIZATION_FACTOR).reshape(-1, 1)
 
-    x_test = np.linspace(0, INTERVAL, 100).reshape(-1, 1)
+    plt.figure(figsize=(12, 8))
+    plt.plot(x_test, optimizer.f_discrete(x_test), 'r:', label=r'$f(x) = \frac{\sin(x) + 1}{2}$')
+    plt.plot(x_train, y_train, 'r.', markersize=10, label='Observations')
+    plt.plot(x_test, mu_star, 'b-', label='Prediction')
+    plt.fill_between(x_test, mu_star - 1.9600 * var_star, mu_star + 1.9600 * var_star, color='b', alpha=.5,
+                     label='95% confidence interval')
+    plt.xlabel('$x$')
+    plt.ylabel('$f(x)$')
+    plt.legend(loc='upper left')
+    plt.title("Offset")
+    plt.show()
 
-    gp = GaussianProcess(kernel, offset_scalar, offset_range=1, offset_scale=1, random_seed=42, quantization_factor=QUANTIZATION_FACTOR,INTERVAL=INTERVAL,protection_width=1)
-    gp.train(x_train, y_train)
-    gp.optimize(x_test, f_discrete_counter, ITERATIONS)
-    mu_star, var_star = gp.predict(x_test)
-    plot_gp(gp, x_test, f_discrete)
 
-
+if __name__ == '__main__':
+    main()
 
