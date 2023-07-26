@@ -5,7 +5,10 @@ from datetime import datetime
 
 from RS_BO.Benchmark import Benchmark, Optimization, GridSearch, RandomSearch
 
-
+QUANTIZATION_FACTOR = 1
+np.random.seed(42)
+INTERVAL = 100
+ITERATIONS = 3
 def kernel(a, b, l=1.0):
     sqdist = np.sum(a**2, 1).reshape(-1, 1) + np.sum(b**2, 1) - 2 * np.dot(a, b.T)
     return np.exp(-0.5 * sqdist / l**2)
@@ -13,7 +16,7 @@ def kernel(a, b, l=1.0):
 def offset_scalar(x):
     return np.cos(x)/2
 
-QUANTIZATION_FACTOR = 1
+
 def x_discrete(x):
     return np.round(x / QUANTIZATION_FACTOR) * QUANTIZATION_FACTOR
 def f_discrete(x):
@@ -57,10 +60,31 @@ def benchmark(INTERVAL,ITERATIONS):
         print(f"The optimal value of f(x) is {optimal_fx}")
         print(f"Time taken: {time_taken}")
 
-def main():
-    np.random.seed(42)
-    INTERVAL = 100
-    ITERATIONS = 3
+def main_sim_data():
+    optimizer = opt(n_iterations=ITERATIONS, quantization_factor=1, offset_range=5, offset_scale=0.1,
+                 kernel_scale=5, protection_width=1)
+    print("regret")
+    print(optimizer.get_cumulative_regret())
+    x_train = optimizer.x_discrete(np.random.uniform(0, INTERVAL, 1))
+    y_train = optimizer.f_discrete(x_train)
+    x_test = np.linspace(0, INTERVAL, 100)
+
+    x_train, y_train, mu_star, var_star = optimizer.optimize(x_train, y_train, x_test)
+
+    benchmark(INTERVAL,ITERATIONS)
+
+    plt.figure(figsize=(12, 8))
+    plt.plot(x_test, optimizer.f_discrete(x_test), 'r:', label=r'$f(x) = \frac{\sin(x) + 1}{2}$')
+    plt.plot(x_train, y_train, 'r.', markersize=10, label='Observations')
+    plt.plot(x_test, mu_star, 'b-', label='Prediction')
+    plt.fill_between(x_test, mu_star - 1.9600 * var_star, mu_star + 1.9600 * var_star, color='b', alpha=.5,
+                     label='95% confidence interval')
+    plt.xlabel('$x$')
+    plt.ylabel('$f(x)$')
+    plt.legend(loc='upper left')
+    plt.title("Offset")
+    plt.show()
+def main_real_data():
     optimizer = opt(n_iterations=ITERATIONS, quantization_factor=1, offset_range=5, offset_scale=0.1,
                  kernel_scale=5, protection_width=1)
     print("regret")
@@ -87,5 +111,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main_real_data()
 
