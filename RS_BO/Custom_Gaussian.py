@@ -69,18 +69,12 @@ class Optimization:
 
     def optimize(self, x_train, y_train, x_test):
         mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, self.f)
-        optimal_value = np.max(self.f_discrete(x_test))  # Optimal value in the domain
         for iteration in range(self.n_iterations):
             EI = self.expected_improvement(x_test, mu_star, var_star, xi=0.01)
             x_next = self.x_discrete(x_test[np.argmax(EI)])
             y_next = self.f_discrete(x_next)
-            regret = optimal_value - y_next  # Regret for this step
-            self.regrets.append(regret)  # Add it to the regret history
             x_train = np.append(x_train, x_next)
             y_train = np.append(y_train, y_next)
-            print(f"Iteration {iteration + 1}: x_next = {x_next}, y_next = {y_next}, regret = {regret}")
+            print(f"Iteration {iteration + 1}: x_next = {x_next}, y_next = {y_next}")
             mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, self.f)
         return x_train, y_train, mu_star, var_star
-
-    def get_cumulative_regret(self):
-        return np.sum(self.regrets)
