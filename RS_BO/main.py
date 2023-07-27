@@ -2,13 +2,16 @@ import numpy as np
 from Custom_Gaussian import Optimization as opt
 import matplotlib.pyplot as plt
 from datetime import datetime
+from typing import Optional
 
 from RS_BO.Benchmark import Benchmark, Optimization, GridSearch, RandomSearch
+from RS_BO.Utility.Sim import Sim
 
 QUANTIZATION_FACTOR = 1
 np.random.seed(42)
 INTERVAL = 100
 ITERATIONS = 3
+SIM: Optional[Sim] = None
 def kernel(a, b, l=1.0):
     sqdist = np.sum(a**2, 1).reshape(-1, 1) + np.sum(b**2, 1) - 2 * np.dot(a, b.T)
     return np.exp(-0.5 * sqdist / l**2)
@@ -21,6 +24,14 @@ def x_discrete(x):
     return np.round(x / QUANTIZATION_FACTOR) * QUANTIZATION_FACTOR
 def f_discrete(x):
     return (np.sin(x_discrete(x)) + 1) / 2
+def f_discrete_real_data(yaw):
+    global SIM
+    if SIM is None:
+        SIM = None  # this line seems redundant as SIM is already None
+    return SIM.sample("yaw_"+str(yaw)) if SIM else None
+def offset_scalar_real_data(x):
+    return np.cos(x)/2
+
 # Add function call counter to f_discrete
 def f_discrete_counter(x):
     f_discrete_counter.counter += 1
@@ -85,6 +96,9 @@ def main_sim_data():
     plt.title("Offset")
     plt.show()
 def main_real_data():
+    global SIM
+    SIM = Sim("/home/lwecke/PycharmProjects/flow_regime_recognition_CameraPosition/modules/0123results.csv","/home/lwecke/PycharmProjects/flow_regime_recognition_CameraPosition/modules/rec_scalar_results.csv")
+
     optimizer = opt(n_iterations=ITERATIONS, quantization_factor=1, offset_range=5, offset_scale=0.1,
                  kernel_scale=5, protection_width=1)
     print("regret")
