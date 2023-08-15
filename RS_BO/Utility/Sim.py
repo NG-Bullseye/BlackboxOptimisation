@@ -1,14 +1,12 @@
 import re
 from RS_BO.Utility import load_real_data
 from collections import namedtuple
+
+
 class Sim:
-
-
     # Define the namedtuple
-
-    def __init__(self,INPUT_DATAPATH,INPUT_DATAPATH_REC_SCALAR):
-        self.yaw_acc_mapping = load_real_data.main(INPUT_DATAPATH)
-        self.yaw_vec_mapping = load_real_data.main(INPUT_DATAPATH_REC_SCALAR)
+    def __init__(self):
+        self.yaw_acc_mapping ,self.yaw_vec_mapping,self.yaw_list= load_real_data.get_real_data_from_db()
         self.YawData = namedtuple("YawData", ["acc", "vec"])
         # Initialize the combined dictionary
         yaw_data = {}

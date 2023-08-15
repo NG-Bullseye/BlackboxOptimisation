@@ -1,5 +1,5 @@
 import numpy as np
-from Custom_Gaussian import Optimization as opt
+from RS_BO.Custom_Gaussian import Optimization as opt
 import matplotlib.pyplot as plt
 from datetime import datetime
 from typing import Optional
@@ -12,6 +12,9 @@ np.random.seed(42)
 INTERVAL = 100
 ITERATIONS = 3
 SIM: Optional[Sim] = None
+yaw_acc=None
+yaw_rec=None
+yaw_list=None
 def kernel(a, b, l=1.0):
     sqdist = np.sum(a**2, 1).reshape(-1, 1) + np.sum(b**2, 1) - 2 * np.dot(a, b.T)
     return np.exp(-0.5 * sqdist / l**2)
@@ -20,9 +23,10 @@ def offset_scalar(x):
     return np.cos(x)/2
 
 def x_discrete(x):
-    return np.round(x / QUANTIZATION_FACTOR) * QUANTIZATION_FACTOR
-#def f_discrete(x):
-#    return (np.sin(x_discrete(x)) + 1) / 2
+    yaw_acc = SIM.yaw_acc_mapping
+    yaw_rec = SIM.yaw_vec_mapping
+    yaw_list = SIM.yaw_list
+    return min(yaw_list, key=lambda y: abs(x - y))
 def f_discrete(x):
     return f_discrete_real_data(x)
 def f_discrete_real_data(yaw):
