@@ -114,7 +114,7 @@ def main_real_data():
 
     x_train, y_train, mu_star, var_star = optimizer.optimize(x_train, y_train, x_test)
 
-    benchmark(INTERVAL,ITERATIONS)
+    #benchmark(INTERVAL,ITERATIONS)
 
     plt.figure(figsize=(12, 8))
     plt.plot(x_test, optimizer.f_discrete(x_test), 'r:', label=r'$f(x) = \frac{\sin(x) + 1}{2}$')
