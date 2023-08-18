@@ -27,16 +27,6 @@ class Optimization:
         return np.exp(-0.5 * ((a - b) ** 2 / self.KERNEL_SCALE ** 2))
 
     @staticmethod
-    def f(x):
-        return (np.sin(0.1 * x) + 1) / 2
-
-    def x_discrete(self, x):
-        return np.round(x / self.QUANTIZATION_FACTOR) * self.QUANTIZATION_FACTOR
-
-    def f_discrete(self, x):
-        return self.f(self.x_discrete(x))
-
-    @staticmethod
     def offset_scalar(x):
         return np.cos(x) / 2
 
@@ -53,9 +43,21 @@ class Optimization:
         protection_term = self.protection_function(x_test, mu, protection_width)
         return self.perturbation(x_test, mu, offset_range, a, 0) * protection_term
 
-    def predict(self, x_train, y_train, x_test, kernel, f, offset_range=None, offset_scale=None, protection_width=None):
-        x_test = self.x_discrete(x_test)
-        K = kernel(x_train[:, np.newaxis], x_train)
+    def predict(self, x_train, y_train, x_test, kernel, x_discrete, offset_range=None, offset_scale=None,
+                protection_width=None):
+
+
+        # Convert x_train to a NumPy array if it's not already one
+        x_train = np.array(x_train)
+
+        # Add a new axis to x_train so that it becomes a column vector
+        x_train_column = x_train[:, np.newaxis]
+
+        # Print the shape to make sure it's what you expect
+        print("Shape of x_train_column:", x_train_column.shape)
+
+        # Compute the kernel
+        K = kernel(x_train_column, x_train)
         K_star = kernel(x_test[:, np.newaxis], x_train)
         offset_kernel = self.offset_vector(x_train, x_test, self.offset_scalar,
                                            offset_range=offset_range or self.OFFSET_RANGE,
@@ -67,19 +69,22 @@ class Optimization:
         var_star = self.kernel(x_test, x_test) - np.einsum('ij,ij->i', K_star @ np.linalg.inv(K), K_star)
         return mu_star, var_star
 
-    def optimize(self, x_train, y_train, x_test):
-        mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, self.f)
-        optimal_value = np.max(self.f_discrete(x_test))  # Optimal value in the domain
+    def optimize(self, x_train, y_train, x_test, f_discrete,x_discrete):
+        mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel,x_discrete)
+        var = f_discrete(x_test)
+        optimal_value = np.max(var)  # Optimal value in the domain
         for iteration in range(self.n_iterations):
             EI = self.expected_improvement(x_test, mu_star, var_star, xi=0.01)
-            x_next = self.x_discrete(x_test[np.argmax(EI)])
-            y_next = self.f_discrete(x_next)
+            v1=np.argmax(EI)
+            v2=x_test[v1]
+            x_next = x_discrete(v2)
+            y_next = f_discrete(x_next)
             regret = optimal_value - y_next  # Regret for this step
             self.regrets.append(regret)  # Add it to the regret history
             x_train = np.append(x_train, x_next)
             y_train = np.append(y_train, y_next)
             print(f"Iteration {iteration + 1}: x_next = {x_next}, y_next = {y_next}, regret = {regret}")
-            mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, self.f)
+            mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, x_discrete)
         return x_train, y_train, mu_star, var_star
 
     def get_cumulative_regret(self):

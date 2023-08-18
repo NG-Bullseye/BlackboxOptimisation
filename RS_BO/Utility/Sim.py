@@ -17,8 +17,27 @@ class Sim:
             if yaw in self.yaw_vec_mapping:
                 # If it does, create a new YawData namedtuple with the acc and vec values
                 yaw_data[yaw] = self.YawData(self.yaw_acc_mapping[yaw], self.yaw_vec_mapping[yaw])
-    def sample(self,yaw_string):
-        self.yaw_acc_mapping.get(self.extract_float_number(yaw_string))
+
+    def sample(self, yaw_string):
+        number = float("".join(filter(lambda ch: ch.isdigit() or ch == "." or ch == "-", yaw_string)))
+        yaw = self.get_closest_key(self.yaw_acc_mapping, number)  # Convert yaw_string to float
+        acc = self.yaw_acc_mapping.get(yaw)
+        return acc
+
+    def get_closest_key(self,d, value, tolerance=1e-2):
+        closest_key = None
+        closest_distance = float('inf')
+
+        for key in d.keys():
+            distance = key - value
+            if abs(distance) < tolerance and abs(distance) < abs(closest_distance):
+                closest_key = key
+                closest_distance = distance
+        return closest_key
+
+    def get_all_yaw_values(self):
+        return list(self.yaw_acc_mapping.keys())
+
     def extract_float_number(self,yaw_string):
         # Define a regular expression pattern to match the float number
         pattern = r"[-+]?\d+(\.\d+)?"

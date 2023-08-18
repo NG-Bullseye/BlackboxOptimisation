@@ -63,7 +63,6 @@ class GridSearch(Benchmark):
         print(f"Cumulative regret: {self.cumulative_regret(all_evals)}")
         return self.get_metrics(result)
 
-
 class RandomSearch(Benchmark):
     def __init__(self, func, bounds, n_points):
         super().__init__(func, bounds)

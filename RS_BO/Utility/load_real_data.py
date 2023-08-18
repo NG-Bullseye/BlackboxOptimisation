@@ -74,8 +74,10 @@ def get_real_data_from_db():
     yaw_acc_list = {}
     yaw_rec_list = {}
     for yaw_value in yaw_list:
-        yaw_acc_list[yaw_value] = sim.get("acc", "yaw", yaw_value)
-        yaw_rec_list[yaw_value] = sim.get("rec_scalar", "yaw", yaw_value)
+        query_value = int(yaw_value) if yaw_value.is_integer() else yaw_value
+        yaw_acc_list[query_value] = sim.get("acc", "yaw", query_value)
+        yaw_rec_list[query_value] = sim.get("rec_scalar", "yaw", query_value)
+
     print(yaw_acc_list)
     print(yaw_rec_list)
 
