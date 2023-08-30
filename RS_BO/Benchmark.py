@@ -80,7 +80,3 @@ class RandomSearch(Benchmark):
         print(f"Cumulative regret: {self.cumulative_regret(all_evals)}")
         return self.get_metrics(result)
 
-def f(x):
-    f.counter += 1
-    return -np.sin(x)
-f.counter = 0

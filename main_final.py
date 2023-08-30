@@ -35,14 +35,30 @@ class Application():
 
     def f_discrete_real_data(self, shifted_yaws):
         sampled_accs = []
-        original_yaws=shifted_yaws#self.shift_to_original(shifted_yaws)
+        original_yaws=self.shift_to_original(shifted_yaws)
         for yaw in original_yaws:
-            yaw_value = self.x_discrete_real_data([yaw])# Get the single value from the returned list
+            yaw_value = self.x_discrete_real_data_unshifted([yaw])# Get the single value from the returned list
             yaw_value = yaw_value[0]
             sampled_acc = self.SIM.sample(str(yaw_value))
             sampled_accs.append(sampled_acc)
         return sampled_accs
 
+    def x_discrete_real_data_unshifted(self, yaws):
+        if not isinstance(yaws, (np.ndarray, list, tuple)):
+            yaws = np.array([yaws])
+        result = []
+        for yaw_value in yaws:
+            closest_yaw = None
+            min_diff = float('inf')  # Initialize with infinity
+            positive_yaw_list = self.yaw_list
+            for yaw in positive_yaw_list:
+                diff = abs(yaw_value - yaw)
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_yaw = yaw
+
+            result.append(closest_yaw)
+        return result
     def x_discrete_real_data(self, yaws):
         if not isinstance(yaws, (np.ndarray, list, tuple)):
             yaws = np.array([yaws])
@@ -50,8 +66,8 @@ class Application():
         for yaw_value in yaws:
             closest_yaw = None
             min_diff = float('inf')  # Initialize with infinity
-
-            for yaw in self.yaw_list:
+            positive_yaw_list=self.shift_to_positive(self.yaw_list)
+            for yaw in positive_yaw_list:
                 diff = abs(yaw_value - yaw)
                 if diff < min_diff:
                     min_diff = diff
@@ -101,15 +117,23 @@ class Application():
             print(f"The optimal value of f(x) is {optimal_fx}")
             print(f"Time taken: {time_taken}")
 
-    def shift_to_positive(self,x_values):
-        self.shift_value = min(0, min(x_values))
-        if self.shift_value < 0:
-            x_values = x_values - self.shift_value
-        return x_values, self.shift_value
+    def shift_to_positive(self, x_values):
+        x_values = np.array(x_values)  # Convert input to numpy array
+        self.shift_value = min(0, np.min(x_values))
 
-    def shift_to_original(self,x_values):
+        if self.shift_value < 0:  # Just check the scalar value directly
+            x_values -= self.shift_value  # Shift all values to positive
+
+        return x_values
+
+    def shift_to_original(self, x_values):
+        if self.shift_value is None:
+            raise ValueError("shift_value has not been set. Please run shift_to_positive first.")
+
+        x_values = np.array(x_values)  # Convert to numpy array for consistency
         if self.shift_value < 0:
-            x_values = [x + self.shift_value for x in x_values]
+            x_values += self.shift_value  # Reverse the shift to get original values
+
         return x_values
 
     def start_sim_with_test_data(self):
@@ -121,7 +145,7 @@ class Application():
 
         x_train, y_train, mu_star, var_star = optimizer.optimize(x_train, y_train, x_test,self.f_discrete ,self.x_discrete)
 
-        self.benchmark(self.INTERVAL,self.ITERATIONS)
+        #self.benchmark(self.INTERVAL,self.ITERATIONS)
 
         plt.figure(figsize=(12, 8))
         plt.plot(x_test, self.f_discrete(x_test), 'r:', label=r'$f(x) = \frac{\sin(x) + 1}{2}$')
@@ -136,12 +160,12 @@ class Application():
         plt.show()
     def start_sim_with_real_data(self):
         optimizer = opt(n_iterations=self.ITERATIONS, quantization_factor=1, offset_range= 5, offset_scale=0.1,
-                     kernel_scale=5, protection_width=1)
-        x_train = self.x_discrete_real_data(np.random.uniform(0, self.INTERVAL, 1))
-        #x_train = self.shift_to_positive(x_train) #shifts all value into the positive x direction so that the algorithm. Required for the optimization algo
+                     kernel_scale=7, protection_width=1)
+        x_train = np.array(self.x_discrete_real_data(np.random.uniform(0, self.INTERVAL, 1))) #shifts all value into the positive x direction so that the algorithm. Required for the optimization algo
+        x_train= self.shift_to_positive(x_train)
         y_train = np.array( self.f_discrete_real_data(x_train))
         x_test = np.array(self.SIM.get_all_yaw_values()) #here the sim db yaw as list must be insearted maybe?
-
+        x_test = self.shift_to_positive(x_test)
         x_train, y_train, mu_star, var_star = optimizer.optimize(x_train, y_train, x_test, self.f_discrete_real_data, self.x_discrete_real_data)
         #self.benchmark(self,INTERVAL,ITERATIONS)
         sorted_train_data = sorted(zip(x_train, y_train))
@@ -151,13 +175,13 @@ class Application():
 
         plt.figure(figsize=(12, 8))
         y_test = self.f_discrete_real_data(x_test_sorted)
-        plt.plot(x_test_sorted, y_test, 'r:', label='Sampled Data')
+        plt.plot(self.shift_to_original(x_test_sorted), y_test , 'r:', label='Sampled Data')
 
-        #plt.plot(x_train_sorted, y_train_sorted, 'r.', markersize=10, label='Observations')
+        plt.plot(self.shift_to_original(x_train_sorted), y_train_sorted, 'r.', markersize=10, label='Observations')
 
-        #plt.plot(x_test_sorted, mu_star_sorted, 'b-', label='Prediction')
+        plt.plot(self.shift_to_original(x_test_sorted), mu_star_sorted, 'b-', label='Prediction')
 
-        #plt.fill_between(x_test_sorted, mu_star_sorted - 1.9600 * var_star, mu_star_sorted + 1.9600 * var_star, color='b', alpha=.5, label='95% confidence interval')
+        plt.fill_between(self.shift_to_original(x_test_sorted), mu_star_sorted- 1.9600 * var_star , mu_star_sorted + 1.9600 * var_star, color='b', alpha=.5, label='95% confidence interval')
         plt.xlabel('$yaw$')
         plt.ylabel('$acc$')
         plt.legend(loc='upper left')

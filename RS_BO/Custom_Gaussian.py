@@ -24,7 +24,7 @@ class Optimization:
         return ei
 
     def kernel(self, a, b):
-        return np.exp(-0.5 * ((a - b) ** 2 / self.KERNEL_SCALE ** 2))
+        return np.exp(-0.1 * ((a - b) ** 2 / self.KERNEL_SCALE ** 2))
 
     @staticmethod
     def offset_scalar(x):
@@ -45,8 +45,6 @@ class Optimization:
 
     def predict(self, x_train, y_train, x_test, kernel, x_discrete, offset_range=None, offset_scale=None,
                 protection_width=None):
-
-
         # Convert x_train to a NumPy array if it's not already one
         x_train = np.array(x_train)
 
