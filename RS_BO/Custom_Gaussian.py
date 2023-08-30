@@ -61,7 +61,7 @@ class Optimization:
                                            offset_range=offset_range or self.OFFSET_RANGE,
                                            offset_scale=offset_scale or self.OFFSET_SCALE,
                                            protection_width=protection_width or self.PROTECTION_WIDTH)
-        jitter = 1e-6
+        jitter = 1e-8
         K += np.eye(K.shape[0]) * jitter
         mu_star = K_star @ np.linalg.inv(K) @ y_train + offset_kernel
         var_star = self.kernel(x_test, x_test) - np.einsum('ij,ij->i', K_star @ np.linalg.inv(K), K_star)
