@@ -1,12 +1,14 @@
 import numpy as np
+from scipy.interpolate import interp1d
+from scipy.ndimage import gaussian_filter1d
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 
 class Optimization:
 
-    def __init__(self, n_iterations=3, quantization_factor=1, offset_range=5, offset_scale=0.1,
-                 kernel_scale=5, protection_width=1):
+    def __init__(self, quantization_factor=1, offset_range=5, offset_scale=0.1,
+                 kernel_scale=5, protection_width=1, n_iterations=3):
         self.n_iterations = n_iterations
         self.QUANTIZATION_FACTOR = quantization_factor
         self.OFFSET_RANGE = offset_range
@@ -51,9 +53,6 @@ class Optimization:
         # Add a new axis to x_train so that it becomes a column vector
         x_train_column = x_train[:, np.newaxis]
 
-        # Print the shape to make sure it's what you expect
-        print("Shape of x_train_column:", x_train_column.shape)
-
         # Compute the kernel
         K = kernel(x_train_column, x_train)
         K_star = kernel(x_test[:, np.newaxis], x_train)
@@ -77,12 +76,15 @@ class Optimization:
             v2=x_test[v1]
             x_next = x_discrete(v2)
             y_next = f_discrete(x_next)
-            regret = optimal_value - y_next  # Regret for this step
+            regret = abs(optimal_value - y_next)  # Regret for this step
             self.regrets.append(regret)  # Add it to the regret history
             x_train = np.append(x_train, x_next)
             y_train = np.append(y_train, y_next)
-            print(f"Iteration {iteration + 1}: x_next = {x_next}, y_next = {y_next}, regret = {regret}")
+            #print(f"Iteration {iteration + 1}: x_next = {x_next}, y_next = {y_next}, regret = {regret}")
             mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, x_discrete)
+            #smoothing
+            #var_star = gaussian_filter1d(var_star, sigma=1.0)
+            #mu_star = gaussian_filter1d(mu_star, sigma=1.0)
         return x_train, y_train, mu_star, var_star
 
     def get_cumulative_regret(self):
