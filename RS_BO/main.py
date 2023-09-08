@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from typing import Optional
 
-from RS_BO.Benchmark import Benchmark, Optimization, GridSearch, RandomSearch
+from RS_BO.Benchmark import Custom_Baysian_Optimisation, Optimization, GridSearch, RandomSearch
 from RS_BO.Utility.Sim import Sim
 
 QUANTIZATION_FACTOR = 1

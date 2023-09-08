@@ -4,24 +4,32 @@ import time
 import matplotlib.pyplot as plt
 from Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
-def random_search(bounds, num_points, app):
-    lower_bound, upper_bound = bounds
-    max_found_y = float('-inf')
-    random_points = np.random.uniform(lower_bound, upper_bound, num_points)
+import numpy as np
+import random
+import time
+import matplotlib.pyplot as plt
 
-    for i, x_value in enumerate(random_points):
-        # Convert x_value to a 1D array before passing it to f_discrete_real_data
-        y_value = app.sampler.f_discrete_real_data(np.array([x_value]))
-        y_value = y_value[0]  # Assuming y_value is a list with one element
-        max_found_y = max(max_found_y, y_value)
-        print(f"Iterer: {i} max_found_y: {max_found_y}")
+class RandomSearch:
+    def __init__(self, app,maxiter,n_repeats):
+        self.app = app
+        self.maxiter=maxiter
+        self.n_repeats=n_repeats
+    def random_search(self, bounds):
+        lower_bound, upper_bound = bounds
+        max_found_y = float('-inf')
+        random_points = np.random.uniform(lower_bound, upper_bound, self.maxiter)
 
-    global_max = app.sampler.getGlobalOptimum_Y()
-    percentage_close = (max_found_y / global_max) * 100
-    return percentage_close
+        for i, x_value in enumerate(random_points):
+            y_value = self.app.sampler.f_discrete_real_data(np.array([x_value]))
+            y_value = y_value[0]
+            max_found_y = max(max_found_y, y_value)
+            print(f"Iterer: {i} max_found_y: {max_found_y}")
 
-def plot_data(x_values, y_values, enable_plot):
-    if enable_plot:
+        global_max = self.app.sampler.getGlobalOptimum_Y()
+        percentage_close = (max_found_y / global_max) * 100
+        return percentage_close
+
+    def plot_data(self, x_values, y_values):
         plt.figure()
         plt.plot(x_values, y_values, marker='o')
         plt.xlabel('Number of Iterations')
@@ -31,41 +39,40 @@ def plot_data(x_values, y_values, enable_plot):
         plt.savefig('random_search_performance.png')
         plt.show()
 
-def for_range_of_iter(iter_interval, early_stop_threshold, num_runs=10, enable_plot=False):
-    start, end = iter_interval
-    iter_values = []
+    def for_range_of_iter(self, early_stop_threshold=0, enable_plot=False):
+        iter_values = []
 
-    for num_points in range(start, end + 1):
-        avg_percentage_close = 0
+        for iter in range(0, self.maxiter + 1):
+            avg_percentage_close = 0
 
-        for run in range(num_runs):
-            current_time = time.time()
-            random.seed(int(current_time * 1e9))
-            app = Application(Sampler(0.1, Sim()))
+            for run in range(self.n_repeats):
+                current_time = time.time()
+                random.seed(int(current_time * 1e9))
+                percentage_close = self.random_search([0, 90])
+                avg_percentage_close += percentage_close
 
-            percentage_close = random_search([0, 90], num_points, app)
-            avg_percentage_close += percentage_close
+            avg_percentage_close /= self.n_repeats
+            print(f"For num_points = {iter}, Average Percentage Close: {avg_percentage_close}%")
 
-        avg_percentage_close /= num_runs
+            iter_values.append((iter, avg_percentage_close))
 
-        print(f"For num_points = {num_points}, Average Percentage Close: {avg_percentage_close}%")
+            if avg_percentage_close >= early_stop_threshold:
+                print("Stopping early.")
+                break
 
-        iter_values.append((num_points, avg_percentage_close))  # Append before checking for early stopping
+        if enable_plot:
+            self.plot_data([i[0] for i in iter_values], [i[1] for i in iter_values])
+        return iter_values
 
-        if avg_percentage_close >= early_stop_threshold:
-            print("Stopping early as the average percentage close reached the given threshold.")
-            break  # Break after appending
-
-    if enable_plot:
-        plot_data([i[0] for i in iter_values], [i[1] for i in iter_values], True)
-    return iter_values
 
 # Example usage
 
 early_stop_threshold = 95
 enable_plot = True
-def main(maxiter):
-    return for_range_of_iter(maxiter, early_stop_threshold, num_runs=20, enable_plot=enable_plot)
+def main(app,maxiter,n_repeats):
+    rs = RandomSearch(app, maxiter, n_repeats)
+    return rs.for_range_of_iter()
 
 if __name__ == '__main__':
-    print(f"FINAL RESULTS RANDOMSEARCH: {main(maxiter = (1, 20))}")
+    app = Application(Sampler(Sim()))
+    print(f"FINAL RESULTS RANDOMSEARCH: {main(app,(1, 20),1)}")

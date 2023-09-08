@@ -3,7 +3,7 @@ from GaussianProcess_1D_rs_wd_fd_md import GaussianProcess
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-from RS_BO.Benchmark import Benchmark, Optimization, GridSearch, RandomSearch
+from RS_BO.Benchmark import Custom_Baysian_Optimisation, Optimization, GridSearch, RandomSearch
 
 
 def kernel(a, b, l=1.0):

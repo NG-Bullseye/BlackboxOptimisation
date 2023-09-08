@@ -6,196 +6,210 @@ from matplotlib import pyplot as plt
 
 from Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
-maxiter_list = []
-average_optimal_fxs = []
-average_cum_reg = []
 
 
-def run_BO_multiple_iterations(min_iter, max_iter, plotting, step=1):
-    for maxiter in range(min_iter, max_iter + 1, step):
-        print(f"Running BO with maxiter = {maxiter}")
-        avg_optimal_fx = BO(maxiter,plotting)
+class BaysianOptimization:
+    def __init__(self,app,maxiter,n_repeats):
+        self.maxiter_list = []
+        self.average_optimal_fxs = []
+        self.average_cum_reg = []
 
-        average_optimal_fxs.append(avg_optimal_fx)
-        maxiter_list.append(maxiter)
-        print(f"INFO: Appending {avg_optimal_fx} to average_optimal_fxs")
-        print(f"CURRENT: maxiter_list: {maxiter_list}")
-        print(f"CURRENT: average_optimal_fxs (index is iteration): {average_optimal_fxs}")
-    plot_performance(max_iter)
-    return average_optimal_fxs, average_cum_reg
-def plot_samples_old():
-    yaw_acc = app.sampler.yaw_acc
-    x_values = list(yaw_acc.keys())
-    x_values = [float(x) for x in x_values]
-
-    #print("Shape of x_values:", np.shape(x_values))
-    #print("Types in x_values:", [type(x) for x in x_values])
-
-    y_values = list(yaw_acc.values())
-    samples=app.sampler.sampled_values_for_vanilla_bo
-    x_sampels =samples
-    x_sampels = [x[0] if isinstance(x, np.ndarray) else x for x in x_sampels]
-
-    #print("x_sampels before f_discrete_real_data call:", x_sampels)
-
-    y_samepls = app.sampler.f_discrete_real_data(x_sampels)
-    plt.scatter(app.sampler.shift_to_original(x_sampels) , y_samepls, color='red', label='Sampled Points')
-    plt.scatter(x_values, y_values, color='blue', label='obj func')
-    plt.title("Sampled Points Over Objective Function Values")
-    plt.xlabel("x-values")
-    plt.ylabel("Objective Function Values")
-    plt.legend()
-    plt.show()
-
-
-def plot_performance(maxiter):
-    global_max = app.sampler.getGlobalOptimum_Y()
-    percentage_close_list = [(fx / global_max) * 100 for fx in average_optimal_fxs]
-
-    print(len(maxiter_list), len(percentage_close_list))
-
-    plt.plot(maxiter_list, percentage_close_list, marker='o')
-    if maxiter==0:
-        maxiter=1
-    # Set axis limits
-    plt.xlim(0, maxiter)
-    plt.ylim(0, 100)  # percentage can be up to 100
-
-    # Ensure x-axis ticks are integers
-    plt.xticks(np.arange(0, maxiter + 1, step=1))
-
-    plt.title(f"BO")
-    plt.xlabel("Max Iterations")
-    plt.ylabel("Percentage Close to Global Max")
-    plt.show()
-
-
-def plot_samples():
-    yaw_acc = app.sampler.yaw_acc
-    x_values = list(yaw_acc.keys())
-    x_values = [float(x) for x in x_values]
-
-    #print("Shape of x_values:", np.shape(x_values))
-    #print("Types in x_values:", [type(x) for x in x_values])
-
-    y_values = list(yaw_acc.values())
-    #print("Before sorting: ", x_values)
-
-    # Sort the x_values and y_values based on the sorted order of x_values
-    sorted_pairs = sorted(zip(x_values, y_values))
-    x_values, y_values = zip(*sorted_pairs)
-    #print("After sorting: ", x_values)
-
-    samples = app.sampler.sampled_values_for_vanilla_bo
-    x_samples = samples
-    x_samples = [x[0] if isinstance(x, np.ndarray) else x for x in x_samples]
-
-    #print("x_samples before f_discrete_real_data call:", x_samples)
-
-    y_samples = app.sampler.f_discrete_real_data(x_samples)
-
-    # Plotting sampled points in red
-    plt.scatter(app.sampler.shift_to_original(x_samples), y_samples, color='red', label='Sampled Points')
-
-    # Plotting objective function values in blue as a line
-    plt.plot(x_values, y_values, color='blue', label='obj func')
-
-    plt.title("Sampled Points Over Objective Function Values")
-    plt.xlabel("x-values")
-    plt.ylabel("Objective Function Values")
-
-    # Setting y-axis limits
-    plt.ylim(0, 1)
-
-    plt.legend()
-    plt.show()
-
-def BO(maxiter,plotting):
-    global cum_regrets, optimal_xs, optimal_fxs, n_evals, times
-    # Reset the summary arrays
-    cum_regrets, optimal_xs, optimal_fxs, n_evals, times = [], [], [], [], []
-    optimal_for_this_maxiter_xs=[]
-    optimal_for_this_maxiter_fxs=[]
-    cum_regrets_for_this_maxiter=[]
-    n_eval=0
-    # Bayesian Optimization
-    for i in range(n_repeats):
-        app.sampler.sampled_values_for_vanilla_bo = []
+        self.app = app
+        self.cum_regrets = []
+        self.optimal_xs = []
+        self.optimal_fxs = []
+        self.n_evals = []
+        self.times = []
+        self.maxiter=maxiter
+        self.n_repeats=n_repeats
+        self.average_optimal_fxs = []
+        self.maxiter_list = []
         np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
-        all_evals.clear()
-        app.sampler.regrets = []  # reset regrets
-        optimizer = BayesianOptimization(
-            f=app.sampler.f_discrete_real_data_x,
-            pbounds={'x': (0, 90)},
-            random_state=1,
-        )
+        app.sampler.reset()
+        self.bounds = [(0, 90)]
+        self.n_repeats = 100
+        self.obj_func = app.sampler.shift_dict_to_positive(app.sampler.yaw_acc)
+        self.all_evals = []
 
-        initial_point_x = np.random.uniform(0, 90, 1)[0]
-        initial_point_y = app.sampler.f_discrete_real_data_x(initial_point_x)
-        print(f'initial_point_x:{initial_point_x} initial_point_y:{initial_point_y}')
-        optimizer.register(params={'x': initial_point_x}, target=initial_point_y)
-        start_time = time.time()
+    def run_BO_multiple_iterations(self,min_iter, max_iter, plotting, step=1):
+        for maxiter in range(min_iter, max_iter + 1, step):
+            print(f"Running BO with maxiter = {maxiter}")
+            avg_optimal_fx = self.bo(maxiter,plotting)
 
-        optimizer.maximize(
-            init_points=0,
-            n_iter=maxiter
-        )
-        #optimal_xs.append(initial_point_x)
-        #optimal_fxs.append(initial_point_y)
-        result = optimizer.max
-        end_time = time.time()
-        time_taken = end_time - start_time
-        n_eval = app.sampler.function_call_counter
-        app.sampler.function_call_counter = 0
+            self.average_optimal_fxs.append(avg_optimal_fx)
+            self.maxiter_list.append(maxiter)
+            print(f"INFO: Appending {avg_optimal_fx} to average_optimal_fxs")
+            print(f"CURRENT: maxiter_list: {self.maxiter_list}")
+            print(f"CURRENT: average_optimal_fxs (index is iteration): {self.average_optimal_fxs}")
+        self.plot_performance(max_iter)
+        return self.average_optimal_fxs, self.average_cum_reg
+    def plot_samples_old(self):
+        yaw_acc = app.sampler.yaw_acc
+        x_values = list(yaw_acc.keys())
+        x_values = [float(x) for x in x_values]
 
-        optimal_for_this_maxiter_x, optimal_for_this_maxiter_y = result['params']['x'], result['target']
-        cum_regret = np.sum(app.sampler.regrets)/len(app.sampler.regrets)
+        #print("Shape of x_values:", np.shape(x_values))
+        #print("Types in x_values:", [type(x) for x in x_values])
 
-        cum_regrets_for_this_maxiter.append(cum_regret)
-        optimal_for_this_maxiter_xs.append(optimal_for_this_maxiter_x)
-        optimal_for_this_maxiter_fxs.append(optimal_for_this_maxiter_y)
+        y_values = list(yaw_acc.values())
+        samples=app.sampler.sampled_values_for_vanilla_bo
+        x_sampels =samples
+        x_sampels = [x[0] if isinstance(x, np.ndarray) else x for x in x_sampels]
 
-        times.append(time_taken)
-        if plotting:
-            plot_samples()
-    n_evals.append(n_eval)
-    avg_cum_regrets_for_this_maxiter = np.mean(cum_regrets_for_this_maxiter[-n_repeats:])
-    avg_optimal_for_this_maxiter_fxs = np.mean(optimal_for_this_maxiter_fxs[-n_repeats:])
+        #print("x_sampels before f_discrete_real_data call:", x_sampels)
 
-    average_cum_reg.append(avg_cum_regrets_for_this_maxiter)
+        y_samepls = app.sampler.f_discrete_real_data(x_sampels)
+        plt.scatter(app.sampler.shift_to_original(x_sampels) , y_samepls, color='red', label='Sampled Points')
+        plt.scatter(x_values, y_values, color='blue', label='obj func')
+        plt.title("Sampled Points Over Objective Function Values")
+        plt.xlabel("x-values")
+        plt.ylabel("Objective Function Values")
+        plt.legend()
+        plt.show()
 
-    global_optima_key, global_optima_value = app.sampler.getGlobalOptimum_X(),app.sampler.getGlobalOptimum_Y() #max(obj_func.items(), key=lambda x: x[1])
 
-    print("Sampling count:", n_eval)
-    print(f"Average time taken: {np.mean(times[-n_repeats:])}")
+    def plot_performance(self,maxiter):
+        global_max = app.sampler.getGlobalOptimum_Y()
+        percentage_close_list = [(fx / global_max) * 100 for fx in self.average_optimal_fxs]
 
-    print("optimal_for_this_maxiter_xs:", optimal_for_this_maxiter_xs)
-    print("optimal_for_this_maxiter_fxs:", optimal_for_this_maxiter_fxs)
+        print(len(self.maxiter_list), len(percentage_close_list))
 
-    print("avg_cum_regrets_for_this_maxiter:", avg_cum_regrets_for_this_maxiter)
-    print("avg_optimal_for_this_maxiter_fxs:", avg_optimal_for_this_maxiter_fxs)
-    print("------------------------------------------------------------------")
-    print(f"AVG Found optima With {n_repeats} repeats and {n_eval} Iterations: y={avg_optimal_for_this_maxiter_fxs}")
-    print("------------------------------------------------------------------")
-    print(f'Global optima: x={global_optima_key} y={global_optima_value}')
+        plt.plot(self.maxiter_list, percentage_close_list, marker='o')
+        if maxiter==0:
+            maxiter=1
+        # Set axis limits
+        plt.xlim(0, maxiter)
+        plt.ylim(0, 100)  # percentage can be up to 100
 
-    return avg_optimal_for_this_maxiter_fxs
+        # Ensure x-axis ticks are integers
+        plt.xticks(np.arange(0, maxiter + 1, step=1))
 
-np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
-app = Application(Sampler(0.1, Sim()))
-app.sampler.reset()
-bounds = [(0, 90)]
-n_repeats = 100
+        plt.title(f"BO")
+        plt.xlabel("Max Iterations")
+        plt.ylabel("Percentage Close to Global Max")
+        plt.show()
 
-obj_func = app.sampler.shift_dict_to_positive(app.sampler.yaw_acc)
-all_evals = []
-cum_regrets, optimal_xs, optimal_fxs, n_evals, times = [], [], [], [], []
 
-def main(maxiter):
-    return run_BO_multiple_iterations(min_iter=0, max_iter=maxiter, step=1,plotting=False)
+    def plot_samples(self):
+        yaw_acc = app.sampler.yaw_acc
+        x_values = list(yaw_acc.keys())
+        x_values = [float(x) for x in x_values]
+
+        #print("Shape of x_values:", np.shape(x_values))
+        #print("Types in x_values:", [type(x) for x in x_values])
+
+        y_values = list(yaw_acc.values())
+        #print("Before sorting: ", x_values)
+
+        # Sort the x_values and y_values based on the sorted order of x_values
+        sorted_pairs = sorted(zip(x_values, y_values))
+        x_values, y_values = zip(*sorted_pairs)
+        #print("After sorting: ", x_values)
+
+        samples = app.sampler.sampled_values_for_vanilla_bo
+        x_samples = samples
+        x_samples = [x[0] if isinstance(x, np.ndarray) else x for x in x_samples]
+
+        #print("x_samples before f_discrete_real_data call:", x_samples)
+
+        y_samples = app.sampler.f_discrete_real_data(x_samples)
+
+        # Plotting sampled points in red
+        plt.scatter(app.sampler.shift_to_original(x_samples), y_samples, color='red', label='Sampled Points')
+
+        # Plotting objective function values in blue as a line
+        plt.plot(x_values, y_values, color='blue', label='obj func')
+
+        plt.title("Sampled Points Over Objective Function Values")
+        plt.xlabel("x-values")
+        plt.ylabel("Objective Function Values")
+
+        # Setting y-axis limits
+        plt.ylim(0, 1)
+
+        plt.legend()
+        plt.show()
+
+    def bo(self, maxiter, plotting):
+        global cum_regrets, optimal_xs, optimal_fxs, n_evals, times
+        # Reset the summary arrays
+        cum_regrets, optimal_xs, optimal_fxs, n_evals, times = [], [], [], [], []
+        optimal_for_this_maxiter_xs=[]
+        optimal_for_this_maxiter_fxs=[]
+        cum_regrets_for_this_maxiter=[]
+        n_eval=0
+        # Bayesian Optimization
+        for i in range(self.n_repeats):
+            app.sampler.sampled_values_for_vanilla_bo = []
+            np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
+            self.all_evals.clear()
+            app.sampler.regrets = []  # reset regrets
+            optimizer = BayesianOptimization(
+                f=app.sampler.f_discrete_real_data_x,
+                pbounds={'x': (0, 90)},
+                random_state=1,
+            )
+
+            initial_point_x = np.random.uniform(0, 90, 1)[0]
+            initial_point_y = app.sampler.f_discrete_real_data_x(initial_point_x)
+            print(f'initial_point_x:{initial_point_x} initial_point_y:{initial_point_y}')
+            optimizer.register(params={'x': initial_point_x}, target=initial_point_y)
+            start_time = time.time()
+
+            optimizer.maximize(
+                init_points=0,
+                n_iter=maxiter
+            )
+            #optimal_xs.append(initial_point_x)
+            #optimal_fxs.append(initial_point_y)
+            result = optimizer.max
+            end_time = time.time()
+            time_taken = end_time - start_time
+            n_eval = app.sampler.function_call_counter
+            app.sampler.function_call_counter = 0
+
+            optimal_for_this_maxiter_x, optimal_for_this_maxiter_y = result['params']['x'], result['target']
+            cum_regret = np.sum(app.sampler.regrets)/len(app.sampler.regrets)
+
+            cum_regrets_for_this_maxiter.append(cum_regret)
+            optimal_for_this_maxiter_xs.append(optimal_for_this_maxiter_x)
+            optimal_for_this_maxiter_fxs.append(optimal_for_this_maxiter_y)
+
+            times.append(time_taken)
+            if plotting:
+                self.plot_samples()
+        n_evals.append(n_eval)
+        avg_cum_regrets_for_this_maxiter = np.mean(cum_regrets_for_this_maxiter[-self.n_repeats:])
+        avg_optimal_for_this_maxiter_fxs = np.mean(optimal_for_this_maxiter_fxs[-self.n_repeats:])
+
+        self.average_cum_reg.append(avg_cum_regrets_for_this_maxiter)
+
+        global_optima_key, global_optima_value = app.sampler.getGlobalOptimum_X(),app.sampler.getGlobalOptimum_Y() #max(obj_func.items(), key=lambda x: x[1])
+
+        print("Sampling count:", n_eval)
+        print(f"Average time taken: {np.mean(times[-self.n_repeats:])}")
+
+        print("optimal_for_this_maxiter_xs:", optimal_for_this_maxiter_xs)
+        print("optimal_for_this_maxiter_fxs:", optimal_for_this_maxiter_fxs)
+
+        print("avg_cum_regrets_for_this_maxiter:", avg_cum_regrets_for_this_maxiter)
+        print("avg_optimal_for_this_maxiter_fxs:", avg_optimal_for_this_maxiter_fxs)
+        print("------------------------------------------------------------------")
+        print(f"AVG Found optima With {self.n_repeats} repeats and {n_eval} Iterations: y={avg_optimal_for_this_maxiter_fxs}")
+        print("------------------------------------------------------------------")
+        print(f'Global optima: x={global_optima_key} y={global_optima_value}')
+
+        return avg_optimal_for_this_maxiter_fxs
+
+
+
+def main(app,maxiter,n_repeats):
+    bo=BaysianOptimization(app, maxiter, n_repeats)
+    return bo.run_BO_multiple_iterations(min_iter=0, max_iter=maxiter, step=1,plotting=False)
 
 if __name__ == '__main__':
-    print(f"FINAL RESULTS VANILLA BO: {main(maxiter = 10)}")
+    app = Application(Sampler(Sim()))
+    print(f"FINAL RESULTS VANILLA BO: {main(app,10,1)}")
 
 
 #Average Cumulative Regret over 20 runs: 0.20757142857142857
