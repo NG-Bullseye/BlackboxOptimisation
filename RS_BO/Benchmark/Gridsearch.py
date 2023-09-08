@@ -64,38 +64,31 @@ class Gridsearch:
             print(f"y_value:{y_value} x_value:{x_value}")
             self.app.sampler.calculateRegret([y_value])
             grid_points.append(x_value)  # Collect individual grid points
-        global_max = self.app.sampler.getGlobalOptimum_Y()
-        percentage_close = (max_found_y / global_max) * 100
-        return percentage_close, grid_points  # Return individual grid points
+        return max_found_y, grid_points  # Return individual grid points
 
     def for_range_of_iter(self, enable_plot=False, enable_plot_grid=False):
         iter_values = []
-
+        average_optimal_fxs=[]
+        average_cumregs=[]
         for num_iterations in range(1,self.maxiter+1):
-            avg_percentage_close = 0
-
+            avg_optimal_fx = 0
             for run in range(self.n_repeats):
                 current_time = time.time()
                 random.seed(int(current_time * 1e9))
 
                 percentage_close, grid_points = self.grid_search([0, 90], num_iterations)
-                avg_percentage_close += percentage_close
+                avg_optimal_fx += percentage_close
                 if enable_plot_grid:
                     self.plot_grid(grid_points, [0, 90])  # Plot the grid points of a single run
 
-            avg_percentage_close /= self.n_repeats
-
-            print(f"For num_iterations = {num_iterations}, Average Percentage Close: {avg_percentage_close}%")
-
-            if avg_percentage_close >= self.early_stop_threshold:
-                print("Stopping early as the average percentage close reached the given threshold.")
-                break
-
-            iter_values.append((num_iterations, avg_percentage_close))
+            avg_optimal_fx /= self.n_repeats
+            average_optimal_fxs.append(avg_optimal_fx)  # Directly append to list
+            average_cumregs.append(abs(avg_optimal_fx-self.app.sampler.getGlobalOptimum_Y()))
+            print(f"For num_iterations = {num_iterations}, Average Percentage Close: {average_optimal_fxs}%")
 
         if enable_plot:
             self.plot_data([i[0] for i in iter_values], [i[1] for i in iter_values],True)
-        return iter_values
+        return average_optimal_fxs,average_cumregs
 
     def calculate_averages(self,iter_values, n_repeats):
         average_optimal_fxs = [y / n_repeats for (_, y) in iter_values]
@@ -112,8 +105,7 @@ class Gridsearch:
 
 def main(app,maxiter,n_repeats):
     gridsearch=Gridsearch(app,maxiter+1,n_repeats)#+1 because there is no initial gussee like in bo
-    iter_values = gridsearch.for_range_of_iter()
-    return  gridsearch.calculate_averages(iter_values, n_repeats)
+    return gridsearch.for_range_of_iter()
 if __name__ == '__main__':
     app = Application(Sampler(Sim()))
     print(f"FINAL RESULTS GRIDSEARCH: {main(app,1,1)}")

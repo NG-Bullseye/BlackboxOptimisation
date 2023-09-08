@@ -65,38 +65,35 @@ class RealDataOptimization:
         total_time = self.end_time - self.start_time
         return optimal_x, optimal_fx, total_time, cum_regret
 
-
-    def run(self):
-        cum_regrets = []
-        optimal_xs = []
-        optimal_fxs = []
-        times = []
-        for _ in range(self.n_repeats):
-            current_time = time.perf_counter()
-            randomseed = random.seed(int(current_time * 1e9))
-            self.params['randomseed']=randomseed
-            results = self.timeit(lambda: self.app.start_sim_with_real_data(**self.params))
-            optimal_x, optimal_fx, time_taken, cumulative_regret = self.get_metrics(results)
-            cum_regrets.append(cumulative_regret)
-            optimal_xs.append(optimal_x)
-            optimal_fxs.append(optimal_fx)
-            times.append(time_taken)
-
-        return self.print_and_return_avg_metrics(optimal_xs, optimal_fxs, times,cum_regrets,self.params["n_iterations"])
-
-    def run_CBO_for_different_maxiter(self,maxiter):
+    def for_range_of_iter(self, maxiter):
         average_optimal_fxs=[]
         average_cum_regrets=[]
 
         for maxiter in range(0, maxiter + 1, 1):
             print(f"Running BO with maxiter = {maxiter}")
-            avg_optimal_x, avg_optimal_fx, avg_time, avg_cum_regrets, n_evals = self.run()
+
+            cum_regrets = []
+            optimal_xs = []
+            optimal_fxs = []
+            times = []
+            for _ in range(self.n_repeats):
+                current_time = time.perf_counter()
+                randomseed = random.seed(int(current_time * 1e9))
+                self.params['randomseed'] = randomseed
+                results = self.timeit(lambda: self.app.start_sim_with_real_data(**self.params))
+                optimal_x, optimal_fx, time_taken, cumulative_regret = self.get_metrics(results)
+                cum_regrets.append(cumulative_regret)
+                optimal_xs.append(optimal_x)
+                optimal_fxs.append(optimal_fx)
+                times.append(time_taken)
+
+            avg_optimal_x, avg_optimal_fx, avg_time, avg_cum_regrets, n_evals =  self.print_and_return_avg_metrics(optimal_xs, optimal_fxs, times,cum_regrets,self.params["n_iterations"])
             average_optimal_fxs.append(avg_optimal_fx)
             average_cum_regrets.append(avg_cum_regrets)
             print(f"INFO: Appending {avg_optimal_fx} to average_optimal_fxs")
             print(f"CURRENT: maxiter: {maxiter}")
             print(f"CURRENT: average_optimal_fxs (index is iteration): {average_optimal_fxs}")
-        #self.plot_performance(maxiter,average_optimal_fxs)
+        self.plot_performance(maxiter,average_optimal_fxs)
         return average_optimal_fxs, average_cum_regrets
 
     def plot_performance(self,maxiter,average_optimal_fxs):
@@ -124,13 +121,13 @@ class RealDataOptimization:
 def main(app,maxiter,n_repeats):
     # Run the benchmark
     benchmark = RealDataOptimization(app, n_repeats=n_repeats,maxiter=maxiter)
-    avg_optimal_fxs,avg_cum_regrets = benchmark.run_CBO_for_different_maxiter(maxiter)
+    avg_optimal_fxs,avg_cum_regrets = benchmark.for_range_of_iter(maxiter)
     print(f"Found optima: fx={avg_optimal_fxs}")
     print(f"With {n_repeats} repeats for every of the {maxiter} iterations ")
     return avg_optimal_fxs, avg_cum_regrets
 
 if __name__ == '__main__':
     app=Application(Sampler(Sim()))
-    avg_optimal_fxs,avg_cum_regrets= main(app,maxiter=10, n_repeats=100)
+    avg_optimal_fxs,avg_cum_regrets= main(app,maxiter=1, n_repeats=10)
     print(f"FINAL RESULTS CUSTOM BO: \navg_optimal_fxs: {avg_optimal_fxs} \navg_cum_regrets:{avg_cum_regrets}")
 
