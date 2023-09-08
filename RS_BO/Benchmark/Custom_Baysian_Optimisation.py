@@ -55,7 +55,7 @@ class RealDataOptimization:
        global_optima_value = self.obj_func[global_optima_key]
        print(f"Average Cumulative Regret over {self.n_points} runs: {avg_cum_regret}")
        print(f'Global optima: x={global_optima_key} y={global_optima_value}')
-       return avg_optimal_x, avg_optimal_fx, avg_time, cum_regrets, n_evals
+       return avg_optimal_x, avg_optimal_fx, avg_time, avg_cum_regret, n_evals
 
 
     def get_metrics(self, result_tuple):

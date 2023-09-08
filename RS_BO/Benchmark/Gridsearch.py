@@ -6,7 +6,7 @@ from RS_BO.Utility.Sim import Sim
 
 # Initialize the application with a Sampler instance
 class Gridsearch:
-    def __init__(self,app,n_repeats,maxiter):
+    def __init__(self,app,maxiter,n_repeats):
         # Example usage
         self.n_repeats=n_repeats
         self.maxiter=maxiter
@@ -49,7 +49,11 @@ class Gridsearch:
 
     def grid_search(self,bounds, num_iterations):
         lower_bound, upper_bound = bounds
-        step_size = (upper_bound - lower_bound) / (num_iterations - 1)
+        if num_iterations == 1:
+            step_size = 0  # or whatever makes sense in this context
+        else:
+            step_size = (upper_bound - lower_bound) / (num_iterations - 1)
+
         max_found_y = float('-inf')
         grid_points = []  # Added list to collect individual grid points
 
@@ -64,14 +68,13 @@ class Gridsearch:
         percentage_close = (max_found_y / global_max) * 100
         return percentage_close, grid_points  # Return individual grid points
 
-    def for_range_of_iter(self, maxiter, early_stop_threshold=0.1, num_runs=10, enable_plot=False, enable_plot_grid=False):
-        start, end = maxiter
+    def for_range_of_iter(self, enable_plot=False, enable_plot_grid=False):
         iter_values = []
 
-        for num_iterations in range(start, end + 1):
+        for num_iterations in range(1,self.maxiter+1):
             avg_percentage_close = 0
 
-            for run in range(num_runs):
+            for run in range(self.n_repeats):
                 current_time = time.time()
                 random.seed(int(current_time * 1e9))
 
@@ -80,11 +83,11 @@ class Gridsearch:
                 if enable_plot_grid:
                     self.plot_grid(grid_points, [0, 90])  # Plot the grid points of a single run
 
-            avg_percentage_close /= num_runs
+            avg_percentage_close /= self.n_repeats
 
             print(f"For num_iterations = {num_iterations}, Average Percentage Close: {avg_percentage_close}%")
 
-            if avg_percentage_close >= early_stop_threshold:
+            if avg_percentage_close >= self.early_stop_threshold:
                 print("Stopping early as the average percentage close reached the given threshold.")
                 break
 
@@ -94,12 +97,23 @@ class Gridsearch:
             self.plot_data([i[0] for i in iter_values], [i[1] for i in iter_values],True)
         return iter_values
 
+    def calculate_averages(self,iter_values, n_repeats):
+        average_optimal_fxs = [y / n_repeats for (_, y) in iter_values]
+        global_max = iter_values[-1][1]  # Assuming the last element holds the global max
+        average_cum_reg = [abs(y - global_max) / n_repeats for (_, y) in iter_values]
+
+        return average_optimal_fxs, average_cum_reg
+
+
+# Example usage
+
+
 
 
 def main(app,maxiter,n_repeats):
-
-    gridsearch=Gridsearch(app,maxiter,n_repeats)
-    return gridsearch.for_range_of_iter(maxiter, num_runs=1)
+    gridsearch=Gridsearch(app,maxiter+1,n_repeats)#+1 because there is no initial gussee like in bo
+    iter_values = gridsearch.for_range_of_iter()
+    return  gridsearch.calculate_averages(iter_values, n_repeats)
 if __name__ == '__main__':
-
-    print(f"FINAL RESULTS GRIDSEARCH: {main(app,maxiter = (2, 10),n_repeats=1)}")
+    app = Application(Sampler(Sim()))
+    print(f"FINAL RESULTS GRIDSEARCH: {main(app,1,1)}")

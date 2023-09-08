@@ -15,7 +15,7 @@ class Benchmark:
         self.n_repeats = n_repeats
         self.scale = scale
 
-        iterations = list(range(1, self.maxiter + 1))
+        iterations = list(range(0, self.maxiter + 1))
 
         RS_avg_optimal_fxs, RS_avg_cum_regrets = RSmain(self.app, self.maxiter, self.n_repeats)
         print(
@@ -80,4 +80,4 @@ class Benchmark:
         plt.savefig(f'{folder_name}/{file_name}')
 
 if __name__ == "__main__":
-    benchmark = Benchmark(scale=1, maxiter=50, n_repeats=10)
+    benchmark = Benchmark(scale=1, maxiter=1, n_repeats=100)

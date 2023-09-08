@@ -11,7 +11,6 @@ from RS_BO.Utility.Sim import Sim
 class BaysianOptimization:
     def __init__(self,app,maxiter,n_repeats):
         self.maxiter_list = []
-        self.average_optimal_fxs = []
         self.average_cum_reg = []
 
         self.app = app
@@ -27,7 +26,6 @@ class BaysianOptimization:
         np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
         app.sampler.reset()
         self.bounds = [(0, 90)]
-        self.n_repeats = 100
         self.obj_func = app.sampler.shift_dict_to_positive(app.sampler.yaw_acc)
         self.all_evals = []
 
@@ -41,7 +39,8 @@ class BaysianOptimization:
             print(f"INFO: Appending {avg_optimal_fx} to average_optimal_fxs")
             print(f"CURRENT: maxiter_list: {self.maxiter_list}")
             print(f"CURRENT: average_optimal_fxs (index is iteration): {self.average_optimal_fxs}")
-        self.plot_performance(max_iter)
+        if plotting:
+            self.plot_performance(max_iter)
         return self.average_optimal_fxs, self.average_cum_reg
     def plot_samples_old(self):
         yaw_acc = app.sampler.yaw_acc
@@ -69,7 +68,7 @@ class BaysianOptimization:
 
 
     def plot_performance(self,maxiter):
-        global_max = app.sampler.getGlobalOptimum_Y()
+        global_max = self.app.sampler.getGlobalOptimum_Y()
         percentage_close_list = [(fx / global_max) * 100 for fx in self.average_optimal_fxs]
 
         print(len(self.maxiter_list), len(percentage_close_list))
@@ -140,18 +139,18 @@ class BaysianOptimization:
         n_eval=0
         # Bayesian Optimization
         for i in range(self.n_repeats):
-            app.sampler.sampled_values_for_vanilla_bo = []
+            self.app.sampler.sampled_values_for_vanilla_bo = []
             np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
             self.all_evals.clear()
-            app.sampler.regrets = []  # reset regrets
+            self.app.sampler.regrets = []  # reset regrets
             optimizer = BayesianOptimization(
-                f=app.sampler.f_discrete_real_data_x,
+                f=self.app.sampler.f_discrete_real_data_x,
                 pbounds={'x': (0, 90)},
                 random_state=1,
             )
 
             initial_point_x = np.random.uniform(0, 90, 1)[0]
-            initial_point_y = app.sampler.f_discrete_real_data_x(initial_point_x)
+            initial_point_y = self.app.sampler.f_discrete_real_data_x(initial_point_x)
             print(f'initial_point_x:{initial_point_x} initial_point_y:{initial_point_y}')
             optimizer.register(params={'x': initial_point_x}, target=initial_point_y)
             start_time = time.time()
@@ -165,11 +164,11 @@ class BaysianOptimization:
             result = optimizer.max
             end_time = time.time()
             time_taken = end_time - start_time
-            n_eval = app.sampler.function_call_counter
-            app.sampler.function_call_counter = 0
+            n_eval = self.app.sampler.function_call_counter
+            self.app.sampler.function_call_counter = 0
 
             optimal_for_this_maxiter_x, optimal_for_this_maxiter_y = result['params']['x'], result['target']
-            cum_regret = np.sum(app.sampler.regrets)/len(app.sampler.regrets)
+            cum_regret = np.sum(self.app.sampler.regrets)/len(self.app.sampler.regrets)
 
             cum_regrets_for_this_maxiter.append(cum_regret)
             optimal_for_this_maxiter_xs.append(optimal_for_this_maxiter_x)
@@ -184,7 +183,7 @@ class BaysianOptimization:
 
         self.average_cum_reg.append(avg_cum_regrets_for_this_maxiter)
 
-        global_optima_key, global_optima_value = app.sampler.getGlobalOptimum_X(),app.sampler.getGlobalOptimum_Y() #max(obj_func.items(), key=lambda x: x[1])
+        global_optima_key, global_optima_value = self.app.sampler.getGlobalOptimum_X(),self.app.sampler.getGlobalOptimum_Y() #max(obj_func.items(), key=lambda x: x[1])
 
         print("Sampling count:", n_eval)
         print(f"Average time taken: {np.mean(times[-self.n_repeats:])}")
