@@ -87,9 +87,13 @@ def for_range_of_iter(iter_interval, early_stop_threshold, num_runs=10, enable_p
 
 
 # Example usage
-iter_interval = (2, 10)
+
 early_stop_threshold = 95
 enable_plot = True
 enable_plot_grid = True
 #grid_search([0, 90], num_iterations=5)
-for_range_of_iter(iter_interval, early_stop_threshold, num_runs=1, enable_plot=enable_plot,enable_plot_grid=enable_plot_grid)
+
+def main(maxiter):
+    return for_range_of_iter(maxiter, early_stop_threshold, num_runs=1, enable_plot=enable_plot, enable_plot_grid=enable_plot_grid)
+if __name__ == '__main__':
+    print(f"FINAL RESULTS GRIDSEARCH: {main(maxiter = (2, 10))}")

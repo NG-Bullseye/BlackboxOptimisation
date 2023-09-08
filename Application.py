@@ -11,11 +11,11 @@ import os
 from scipy.ndimage import gaussian_filter1d
 
 class Sampler():
-    def __init__(self,QUANTIZATION_FACTOR,dataObj):
+    def __init__(self,dataObj):
         self.sampled_values_for_vanilla_bo = []
         self.regrets = np.array([])
         self.function_call_counter=0
-        self.QUANTIZATION_FACTOR=QUANTIZATION_FACTOR
+        self.QUANTIZATION_FACTOR=0.1
         self.shift_value = -45 #set to the minimum of the negative value interval of sampled data
         self.dataObj=dataObj
         self.yaw_acc = self.dataObj.yaw_acc_mapping
@@ -323,7 +323,7 @@ class Application():
         return cumulative_regret
 
 if __name__ == '__main__':
-    app = Application(Sampler(0.1, Sim()))
+    app = Application(Sampler(Sim()))
     b=os.environ.get("test")
     print("Environment Variable:", b)  # Debug print
     if b=='1':

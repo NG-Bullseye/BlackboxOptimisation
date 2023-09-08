@@ -58,10 +58,14 @@ def for_range_of_iter(iter_interval, early_stop_threshold, num_runs=10, enable_p
 
     if enable_plot:
         plot_data([i[0] for i in iter_values], [i[1] for i in iter_values], True)
-
+    return iter_values
 
 # Example usage
-iter_interval = (1, 20)
+
 early_stop_threshold = 95
 enable_plot = True
-for_range_of_iter(iter_interval, early_stop_threshold, num_runs=20, enable_plot=enable_plot)
+def main(maxiter):
+    return for_range_of_iter(maxiter, early_stop_threshold, num_runs=20, enable_plot=enable_plot)
+
+if __name__ == '__main__':
+    print(f"FINAL RESULTS RANDOMSEARCH: {main(maxiter = (1, 20))}")
