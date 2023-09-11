@@ -41,8 +41,8 @@ class Benchmark:
 
         color_list = ['b', 'g', 'r', 'm']
         ax1.set_xlabel('Number of Iterations')
-        ax1.set_ylabel('Average Percentage Close to Global Maximum', color='k')
-
+        ax1.set_ylabel(f'Average Accuracy found over {self.n_repeats} repeats', color='k')
+        plt.title(f"Global maximum {self.app.sampler.getGlobalOptimum_Y()}  n_repeats={self.n_repeats}")
         ax1.plot(iterations, GS_fxs, color=color_list[0], label='GS_fxs')
         ax1.plot(iterations, BO_fxs, color=color_list[1], label='BO_fxs')
         ax1.plot(iterations, CBO_fxs, color=color_list[2], label='CBO_fxs')
@@ -60,12 +60,13 @@ class Benchmark:
 
         color_list = ['b', 'g', 'r', 'm']
         ax1.set_xlabel('Number of Iterations')
-        ax1.set_ylabel('Average Cumulative Regrets', color='k')
+        ax1.set_ylabel(f'Average Cumulative Regrets over {self.n_repeats} repeats', color='k')
 
         ax1.plot(iterations, GS_regrets, color=color_list[0], label='GS_regrets')
         ax1.plot(iterations, BO_regrets, color=color_list[1], label='BO_regrets')
         ax1.plot(iterations, CBO_regrets, color=color_list[2], label='CBO_regrets')
         ax1.plot(iterations, RS_regrets, color=color_list[3], label='RS_regrets')
+        plt.title(f"Cumulative regret")
 
         ax1.legend(loc='upper left')
         plt.show()
@@ -80,4 +81,4 @@ class Benchmark:
         plt.savefig(f'{folder_name}/{file_name}')
 
 if __name__ == "__main__":
-    benchmark = Benchmark(scale=1, maxiter=10, n_repeats=10)
+    benchmark = Benchmark(scale=1, maxiter=50, n_repeats=1000)

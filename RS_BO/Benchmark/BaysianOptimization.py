@@ -42,6 +42,7 @@ class BaysianOptimization:
         if plotting:
             self.plot_performance(max_iter)
         return self.average_optimal_fxs, self.average_cum_reg
+
     def plot_samples_old(self):
         yaw_acc = app.sampler.yaw_acc
         x_values = list(yaw_acc.keys())
@@ -168,7 +169,10 @@ class BaysianOptimization:
             self.app.sampler.function_call_counter = 0
 
             optimal_for_this_maxiter_x, optimal_for_this_maxiter_y = result['params']['x'], result['target']
-            cum_regret = np.sum(self.app.sampler.regrets)/len(self.app.sampler.regrets)
+            if len(self.app.sampler.regrets)!= maxiter+1:
+                print(f"ERROR  len(self.app.sampler.regrets)!= maxiter maxiter{maxiter} len(self.app.sampler.regrets){len(self.app.sampler.regrets)}")
+            a=len(self.app.sampler.regrets)
+            cum_regret = np.sum(self.app.sampler.regrets)
 
             cum_regrets_for_this_maxiter.append(cum_regret)
             optimal_for_this_maxiter_xs.append(optimal_for_this_maxiter_x)
@@ -208,7 +212,7 @@ def main(app,maxiter,n_repeats):
 
 if __name__ == '__main__':
     app = Application(Sampler(Sim()))
-    print(f"FINAL RESULTS VANILLA BO: {main(app,10,1)}")
+    print(f"FINAL RESULTS VANILLA BO: {main(app,0,1001)}")
 
 
 #Average Cumulative Regret over 20 runs: 0.20757142857142857

@@ -56,15 +56,16 @@ class Gridsearch:
 
         max_found_y = float('-inf')
         grid_points = []  # Added list to collect individual grid points
-
+        cumreg=0
         for i in range(num_iterations):
             x_value = lower_bound + i * step_size
             y_value = self.app.sampler.f_discrete_real_data_x(x_value)
             max_found_y = max(max_found_y, y_value)
             print(f"y_value:{y_value} x_value:{x_value}")
-            self.app.sampler.calculateRegret([y_value])
+            cumreg+=abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
             grid_points.append(x_value)  # Collect individual grid points
-        return max_found_y, grid_points  # Return individual grid points
+        return max_found_y, grid_points,cumreg  # Return individual grid points
+
 
     def for_range_of_iter(self, enable_plot=False, enable_plot_grid=False):
         iter_values = []
@@ -72,18 +73,20 @@ class Gridsearch:
         average_cumregs=[]
         for num_iterations in range(1,self.maxiter+1):
             avg_optimal_fx = 0
+            avg_cumreg=0
             for run in range(self.n_repeats):
                 current_time = time.time()
                 random.seed(int(current_time * 1e9))
 
-                percentage_close, grid_points = self.grid_search([0, 90], num_iterations)
-                avg_optimal_fx += percentage_close
+                max_found_y, grid_points ,cumreg= self.grid_search([0, 90], num_iterations)
+                avg_optimal_fx += max_found_y
+                avg_cumreg+=cumreg
                 if enable_plot_grid:
                     self.plot_grid(grid_points, [0, 90])  # Plot the grid points of a single run
-
             avg_optimal_fx /= self.n_repeats
+            avg_cumreg /= self.n_repeats
             average_optimal_fxs.append(avg_optimal_fx)  # Directly append to list
-            average_cumregs.append(abs(avg_optimal_fx-self.app.sampler.getGlobalOptimum_Y()))
+            average_cumregs.append(avg_cumreg)
             print(f"For num_iterations = {num_iterations}, Average Percentage Close: {average_optimal_fxs}%")
 
         if enable_plot:

@@ -231,16 +231,15 @@ class Application():
         plt.legend(loc='upper left')
         plt.title("Offset")
         plt.show()
+
+
     def start_sim_with_real_data(self, quantization_factor=1., offset_range=1., offset_scale=1.,
                         kernel_scale=1.3, protection_width=1.,n_iterations=10,randomseed=42):
         self.randomseed=randomseed
-        np.random.seed(self.randomseed)
-
         optimizer = opt(quantization_factor, offset_range, offset_scale,
                         kernel_scale, protection_width, n_iterations)
 
-        x_train = self.sampler.x_discrete_real_data_unshifted(np.random.uniform(-45, self.INTERVAL, 1))
-        x_train_pos = self.sampler.shift_to_positive(x_train)
+        x_train_pos = self.sampler.shift_to_positive(self.initialPoint())
         y_train_pos = np.array(self.sampler.f_discrete_real_data(x_train_pos))
         x_test = np.sort(np.array(self.sampler.dataObj.get_all_yaw_values()))
         x_test = self.sampler.shift_to_positive(x_test)
@@ -322,7 +321,19 @@ class Application():
         self.optimal_fx=optimal_fx
         return cumulative_regret
 
-if __name__ == '__main__':
+    def initialPoint(self):
+        np.random.seed(self.randomseed)
+        x_train = self.sampler.x_discrete_real_data_unshifted(np.random.uniform(-45, self.INTERVAL, 1))
+        return x_train
+    def test_initial_point_destib(self):
+        avg_x_train=0.
+        for i in range(1000):
+            avg_x_train+=  self.initialPoint()[0]
+        avg_x_train /= 1000
+        print(self.sampler.shift_to_positive(avg_x_train))
+
+
+def main():
     app = Application(Sampler(Sim()))
     b=os.environ.get("test")
     print("Environment Variable:", b)  # Debug print
@@ -333,6 +344,10 @@ if __name__ == '__main__':
                                      kernel_scale=0.27, offset_scale= 3.0,offset_range=10., protection_width=10.
                                      ,n_iterations=10,randomseed= 524)
 
+
+if __name__ == '__main__':
+    app = Application(Sampler(Sim()))
+    app.test_initial_point_destib()
 
 #kernel_scale, offset_scale, offset_range, protection_width
 #1.2473487599484843, 0.8723494134771395, 1.97449579471951, 0.8943425791232277

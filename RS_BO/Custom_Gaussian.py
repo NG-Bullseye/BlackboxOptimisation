@@ -70,6 +70,8 @@ class Optimization:
         mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel,x_discrete)
         var = f_discrete(x_test)
         optimal_value = np.max(var)  # Optimal value in the domain
+        regret = abs(optimal_value - y_train)  # Regret for this step
+        self.regrets.append(regret)
         for iteration in range(self.n_iterations):
             EI = self.expected_improvement(x_test, mu_star, var_star, xi=0.01)
             v1=np.argmax(EI)
