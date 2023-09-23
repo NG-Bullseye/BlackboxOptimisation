@@ -38,8 +38,8 @@ class Sampler():
                 closest_key = key
                 closest_distance = distance
         return closest_key
-    def offset_scalar(x):
-        return np.cos(x) / 2
+    def return_zero(self,x):
+        return 0
     def x_discrete(self,x):
         return np.round(x / self.QUANTIZATION_FACTOR) * self.QUANTIZATION_FACTOR
     def f_discrete(self,x):
@@ -131,7 +131,14 @@ class Sampler():
         return result
 
     def offset_scalar_real_data(self,x):
-        return np.cos(x)/2
+        x_shifted=self.shift_to_original(x)
+        epsilon = 1e-6  # tolerance
+        rec_scalar = np.array(
+            [self.yaw_rec.get(next((k for k in self.yaw_rec.keys() if np.isclose(i, k, atol=epsilon)), None), None) for
+             i in x_shifted])
+
+        #rec_scalar=self.yaw_rec.get(x)
+        return rec_scalar
 
     def shift_dict_to_positive(self,d):
         min_key = min(d.keys())
@@ -139,22 +146,19 @@ class Sampler():
             shift_value = abs(min_key)
             d = {key + shift_value: value for key, value in d.items()}
         return d
+
     def shift_to_positive(self, x_values):
         x_values = np.array(x_values)  # Convert input to numpy array
-
-
         if self.shift_value < 0:  # Just check the scalar value directly
             x_values -= self.shift_value  # Shift all values to positive
-
         return x_values
+
     def shift_to_original_BO(self, x_values):
         if self.shift_value is None:
             raise ValueError("shift_value has not been set. Please run shift_to_positive first.")
-
         x_values = np.atleast_1d(x_values)  # Ensure it is at least 1-D
         if self.shift_value < 0:
             x_values += self.shift_value  # Reverse the shift to get original values
-
         return x_values
 
     def shift_to_original(self, x_values):
@@ -234,10 +238,14 @@ class Application():
 
 
     def start_sim_with_real_data(self, quantization_factor=1., offset_range=1., offset_scale=1.,
-                        kernel_scale=1.3, protection_width=1.,n_iterations=10,randomseed=42):
+                        kernel_scale=1.3, protection_width=1.,n_iterations=10,randomseed=42,deactivate_rec_scalar=False):
         self.randomseed=randomseed
-        optimizer = opt(quantization_factor, offset_range, offset_scale,
-                        kernel_scale, protection_width, n_iterations)
+        if deactivate_rec_scalar == False:
+            optimizer = opt(self.sampler.offset_scalar_real_data,quantization_factor, offset_range, offset_scale,
+                            kernel_scale, protection_width, n_iterations )
+        else:
+            optimizer = opt(self.sampler.return_zero,quantization_factor, offset_range, offset_scale,
+                            kernel_scale, protection_width, n_iterations)
 
         x_train_pos = self.sampler.shift_to_positive(self.initialPoint())
         y_train_pos = np.array(self.sampler.f_discrete_real_data(x_train_pos))
@@ -248,6 +256,8 @@ class Application():
         x_train_pos, y_train_pos, mu_star, var_star = optimizer.optimize(
             x_train_pos, y_train_pos, x_test, self.sampler.f_discrete_real_data, self.sampler.x_discrete_real_data
         )
+
+
 
         # Find the optimal solution
         optimal_index = np.argmax(y_train_pos)
@@ -332,9 +342,8 @@ class Application():
         avg_x_train /= 1000
         print(self.sampler.shift_to_positive(avg_x_train))
 
-
-def main():
-    app = Application(Sampler(Sim()))
+def main(dbName):
+    app = Application(Sampler(Sim(dbName)))
     b=os.environ.get("test")
     print("Environment Variable:", b)  # Debug print
     if b=='1':
@@ -346,7 +355,8 @@ def main():
 
 
 if __name__ == '__main__':
-    app = Application(Sampler(Sim()))
+    dbName="Testdata"
+    app = Application(Sampler(Sim(dbName)))
     app.test_initial_point_destib()
 
 #kernel_scale, offset_scale, offset_range, protection_width

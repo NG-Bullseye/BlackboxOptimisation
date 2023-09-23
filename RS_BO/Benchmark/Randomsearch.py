@@ -2,17 +2,16 @@ import numpy as np
 import random
 import time
 import matplotlib.pyplot as plt
+from collections import defaultdict
+
 from Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
-import random
-import time
 
 class RandomSearch:
     def __init__(self, app,maxiter,n_repeats):
         self.app = app
         self.maxiter=maxiter
         self.n_repeats=n_repeats
-        self.early_stop_threshold = 95
         self.enable_plot = True
 
     def random_search(self, bounds,iter):
@@ -68,7 +67,36 @@ class RandomSearch:
             #self.plot_data([i[0] for i in average_optimal_fxs], [i[1] for i in average_optimal_fxs])
         return average_optimal_fxs,average_cumregs
 
+    def test(self, iteration, num_executions):
+        self.app = Application(Sampler(Sim()))
+        optimal_values = []
 
+        # Execute the algorithm multiple times and store optimal_values
+        for _ in range(num_executions):
+            optimal_value, reg = self.random_search([0, 90], iteration)
+            optimal_values.append(optimal_value)
+
+        # Count frequency of each optimal_value
+        frequency_count = defaultdict(int)
+        for value in optimal_values:
+            rounded_value = round(value, 2)  # Round to two decimal places
+            frequency_count[rounded_value] += 1
+
+        # Convert frequency count to probabilities
+        probabilities = {k: v / num_executions for k, v in frequency_count.items()}
+
+        # Sort the keys for plotting
+        keys = sorted(probabilities.keys())
+
+        # Extract the corresponding probabilities
+        values = [probabilities[k] for k in keys]
+
+        # Plotting with red crosses
+        plt.scatter(keys, values, marker='x', color='red')
+        plt.xlabel('Optimal Value')
+        plt.ylabel('Probability')
+        plt.title('Probability Distribution of Optimal Values')
+        plt.show()
 
 
 # Example usage
@@ -80,4 +108,7 @@ def main(app,maxiter,n_repeats):
 
 if __name__ == '__main__':
     app = Application(Sampler(Sim()))
-    print(f"FINAL RESULTS RANDOMSEARCH: {main(app,0,1111)}")
+    rs = RandomSearch(app, 0 + 1, 1)
+    rs.test(iteration = 1,num_executions = 1000)
+    #print(f"FINAL RESULTS RANDOMSEARCH: {main(app,0,1111)}")
+

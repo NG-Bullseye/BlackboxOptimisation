@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
-
+from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 
 class BaysianOptimization:
     def __init__(self,app,maxiter,n_repeats):
@@ -139,6 +139,7 @@ class BaysianOptimization:
         cum_regrets_for_this_maxiter=[]
         n_eval=0
         # Bayesian Optimization
+
         for i in range(self.n_repeats):
             self.app.sampler.sampled_values_for_vanilla_bo = []
             np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
@@ -147,7 +148,7 @@ class BaysianOptimization:
             optimizer = BayesianOptimization(
                 f=self.app.sampler.f_discrete_real_data_x,
                 pbounds={'x': (0, 90)},
-                random_state=1,
+                random_state=1
             )
 
             initial_point_x = np.random.uniform(0, 90, 1)[0]
@@ -212,7 +213,7 @@ def main(app,maxiter,n_repeats):
 
 if __name__ == '__main__':
     app = Application(Sampler(Sim()))
-    print(f"FINAL RESULTS VANILLA BO: {main(app,0,1001)}")
+    print(f"FINAL RESULTS VANILLA BO: {main(app,2,200)}")
 
 
 #Average Cumulative Regret over 20 runs: 0.20757142857142857

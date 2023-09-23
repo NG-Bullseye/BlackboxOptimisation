@@ -68,8 +68,11 @@ class Sim_data_db:
     def close(self):
         self.c.close()
         self.conn.close()
-def get_real_data_from_db():
-    sim = Sim_data_db('postgres')
+def get_real_data_from_db(dbName):
+    #sim = Sim_data_db('postgres')
+    #sim = Sim_data_db('Testdata')
+    sim = Sim_data_db(dbName)
+
     yaw_list = sim.get_asList("yaw")
     yaw_acc_list = {}
     yaw_rec_list = {}

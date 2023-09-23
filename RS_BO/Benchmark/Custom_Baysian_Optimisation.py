@@ -12,9 +12,10 @@ from Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
 
 class RealDataOptimization:
-    def __init__(self, app,maxiter, n_repeats):
+    def __init__(self, app,maxiter, n_repeats,deactivate_rec_scalar=False):
         print("\n#################################################################################################")
         print("STARTING Custom_BO")
+        self.deactivate_rec_scalar=deactivate_rec_scalar
         self.n_repeats = n_repeats
         self.cumulative_regret_list = []
         self.n_points = 20  # number of benchmarks for avereging
@@ -32,12 +33,13 @@ class RealDataOptimization:
         # Parameters for start_sim_with_real_data
         self.params = {
             'quantization_factor': 1,
-            'kernel_scale': 0.09805098972579881,  # needs propper HP OPT and Training
-            'offset_scale': 0.18080060285014135,  # needs propper HP OPT and Training
-            'offset_range': 24.979610423583395,  # needs propper HP OPT and Training
-            'protection_width': 0.8845792950045508,  # needs propper HP OPT and Training
+            'kernel_scale': 0.09805098972579881,  # 2.221461291655982
+            'offset_scale': 0.18080060285014135,  # 0.6953434383380036
+            'offset_range': 24.979610423583395,  # 50.92663911701745
+            'protection_width': 0.8845792950045508,  #3.2715701918611297
             'n_iterations': maxiter,
-            'randomseed': 524
+            'randomseed': 524,
+            'deactivate_rec_scalar': deactivate_rec_scalar
         }
 
     def timeit(self, method):
@@ -147,11 +149,28 @@ def main(app,maxiter,n_repeats,plotting=False):
         #benchmark.plot_performance(maxiter,avg_optimal_fxs)
         benchmark.plot_graph(maxiter, avg_optimal_fxs)
     return avg_optimal_fxs, avg_cum_regrets
+def main_no_rec(app,maxiter,n_repeats,plotting=False):
+    # Run the benchmark
+    benchmark = RealDataOptimization(app, n_repeats=n_repeats, maxiter=maxiter + 1,deactivate_rec_scalar=True)
+    avg_optimal_fxs, avg_cum_regrets = benchmark.for_range_of_iter()
+    print(f"Found optima: fx={avg_optimal_fxs}")
+    print(f"With {n_repeats} repeats for every of the {maxiter} iterations ")
+    if plotting:
+        # benchmark.plot_performance(maxiter,avg_optimal_fxs)
+        benchmark.plot_graph(maxiter, avg_optimal_fxs)
+    return avg_optimal_fxs, avg_cum_regrets
 
 if __name__ == '__main__':
     app=Application(Sampler(Sim()))
     maxiter = 1
-    n_repeats = 1000
-    avg_optimal_fxs,avg_cum_regrets= main(app,maxiter, n_repeats,plotting=True)
+    n_repeats = 200
+    avg_optimal_fxs,avg_cum_regrets= main_no_rec(app,maxiter, n_repeats,plotting=True)
     print(f"FINAL RESULTS CUSTOM BO: \navg_optimal_fxs: {avg_optimal_fxs} \navg_cum_regrets:{avg_cum_regrets}")
 
+#FINAL RESULTS CUSTOM BO:
+#avg_optimal_fxs: [0.8074000000000008, 0.8799500000000003]
+#avg_cum_regrets:[0.17259999999999986, 0.34159999999999996]
+
+#FINAL RESULTS CUSTOM BO no_rec:
+#avg_optimal_fxs: [0.8196500000000003, 0.8736000000000008]
+#avg_cum_regrets:[0.16034999999999988, 0.35314999999999996]

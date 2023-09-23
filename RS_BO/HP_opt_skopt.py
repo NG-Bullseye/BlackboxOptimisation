@@ -8,7 +8,7 @@ import random
 import time
 
 min_cumulative_regret_global = float('inf')
-data = Sampler(1,Sim())
+data = Sampler(Sim())
 class MyApp:
     def start_optimization(self, quantization_factor, offset_range, offset_scale, kernel_scale, protection_width,
                            n_iterations):

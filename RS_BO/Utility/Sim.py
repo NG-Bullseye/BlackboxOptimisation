@@ -5,8 +5,8 @@ from collections import namedtuple
 
 class Sim:
     # Define the namedtuple
-    def __init__(self):
-        self.yaw_acc_mapping ,self.yaw_vec_mapping,self.yaw_list= load_real_data.get_real_data_from_db()
+    def __init__(self,dbName):
+        self.yaw_acc_mapping ,self.yaw_vec_mapping,self.yaw_list= load_real_data.get_real_data_from_db(dbName)
         self.YawData = namedtuple("YawData", ["acc", "vec"])
         # Initialize the combined dictionary
         yaw_data = {}

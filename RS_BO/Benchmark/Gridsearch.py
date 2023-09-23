@@ -1,6 +1,8 @@
 import random
 import time
 import matplotlib.pyplot as plt
+import numpy as np
+
 from Application import Application, Sampler  # Make sure to import Application and Sampler from your file
 from RS_BO.Utility.Sim import Sim
 
@@ -13,7 +15,7 @@ class Gridsearch:
         self.app=app
         self.early_stop_threshold = 95
         self.enable_plot = True
-        self.enable_plot_grid = True
+        self.enable_plot_grid = False
         # grid_search([0, 90], num_iterations=5),
 
     def plot_grid(self,grid_points, bounds):
@@ -46,25 +48,55 @@ class Gridsearch:
             plt.grid(True)
             plt.savefig('grid_search_performance.png')
             plt.show()
+    def generate_randomized_grid(self, lower_bound, upper_bound, num_iterations, shift_value=0):
+        bounds = upper_bound - lower_bound
+        equidistant_points = np.linspace(lower_bound, upper_bound, num_iterations, endpoint=False)
+        random_shifts = np.random.uniform(-bounds / (2 * num_iterations), bounds / (2 * num_iterations), num_iterations)
+        randomized_points = equidistant_points + random_shifts + shift_value
+        randomized_points = randomized_points % upper_bound
+        randomized_points.sort()
+        return randomized_points
 
-    def grid_search(self,bounds, num_iterations):
+    def grid_search(self, bounds, num_iterations, shift=False):
         lower_bound, upper_bound = bounds
-        if num_iterations == 1:
-            step_size = 0  # or whatever makes sense in this context
+
+        if shift:
+            current_time = time.time()
+            random.seed(int(current_time * 1e9))
+            shift_value = random.uniform(0, 90)
         else:
-            step_size = (upper_bound - lower_bound) / (num_iterations - 1)
+            shift_value = 0
 
         max_found_y = float('-inf')
-        grid_points = []  # Added list to collect individual grid points
-        cumreg=0
-        for i in range(num_iterations):
-            x_value = lower_bound + i * step_size
+        cumreg = 0
+
+        # Generate randomized grid points
+        grid_points = self.generate_randomized_grid(lower_bound, upper_bound, num_iterations, shift_value)
+
+        for x_value in grid_points:
             y_value = self.app.sampler.f_discrete_real_data_x(x_value)
             max_found_y = max(max_found_y, y_value)
-            print(f"y_value:{y_value} x_value:{x_value}")
-            cumreg+=abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
-            grid_points.append(x_value)  # Collect individual grid points
-        return max_found_y, grid_points,cumreg  # Return individual grid points
+            cumreg += abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
+
+        return max_found_y, grid_points, cumreg
+    #def grid_search(self,bounds, num_iterations):
+    #    lower_bound, upper_bound = bounds
+    #    if num_iterations == 1:
+    #        step_size = 0  # or whatever makes sense in this context
+    #    else:
+    #        step_size = (upper_bound - lower_bound) / (num_iterations - 1)
+#
+    #    max_found_y = float('-inf')
+    #    grid_points = []  # Added list to collect individual grid points
+    #    cumreg=0
+    #    for i in range(num_iterations):
+    #        x_value = lower_bound + i * step_size
+    #        y_value = self.app.sampler.f_discrete_real_data_x(x_value)
+    #        max_found_y = max(max_found_y, y_value)
+    #        print(f"y_value:{y_value} x_value:{x_value}")
+    #        cumreg+=abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
+    #        grid_points.append(x_value)  # Collect individual grid points
+    #    return max_found_y, grid_points,cumreg  # Return individual grid points
 
 
     def for_range_of_iter(self, enable_plot=False, enable_plot_grid=False):
@@ -75,13 +107,11 @@ class Gridsearch:
             avg_optimal_fx = 0
             avg_cumreg=0
             for run in range(self.n_repeats):
-                current_time = time.time()
-                random.seed(int(current_time * 1e9))
 
-                max_found_y, grid_points ,cumreg= self.grid_search([0, 90], num_iterations)
+                max_found_y, grid_points ,cumreg= self.grid_search([0, 90], num_iterations ,shift=True)
                 avg_optimal_fx += max_found_y
                 avg_cumreg+=cumreg
-                if enable_plot_grid:
+                if self.enable_plot_grid:
                     self.plot_grid(grid_points, [0, 90])  # Plot the grid points of a single run
             avg_optimal_fx /= self.n_repeats
             avg_cumreg /= self.n_repeats
@@ -111,4 +141,5 @@ def main(app,maxiter,n_repeats):
     return gridsearch.for_range_of_iter()
 if __name__ == '__main__':
     app = Application(Sampler(Sim()))
-    print(f"FINAL RESULTS GRIDSEARCH: {main(app,1,1)}")
+    opt,reg=main(app,30,1000)
+    print(f"FINAL RESULTS GRIDSEARCH: \nFound optimia \n{opt}\nCumulative regret \n{reg}")

@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 
 class Optimization:
 
-    def __init__(self, quantization_factor=1, offset_range=5, offset_scale=0.1,
+    def __init__(self, get_rec_scalar,quantization_factor=1, offset_range=5, offset_scale=0.1,
                  kernel_scale=5, protection_width=1, n_iterations=3):
+        self.get_rec_scalar=get_rec_scalar
         self.n_iterations = n_iterations
         self.QUANTIZATION_FACTOR = quantization_factor
         self.OFFSET_RANGE = offset_range
@@ -27,10 +28,6 @@ class Optimization:
 
     def kernel(self, a, b):
         return np.exp(-0.1 * ((a - b) ** 2 / self.KERNEL_SCALE ** 2))
-
-    @staticmethod
-    def offset_scalar(x):
-        return np.cos(x) / 2
 
     def perturbation(self, x, mu, width, a, y_offset):
         return a * ((x - mu) / width) * np.exp(-((x - mu) / width) ** 2) + y_offset
@@ -56,7 +53,7 @@ class Optimization:
         # Compute the kernel
         K = kernel(x_train_column, x_train)
         K_star = kernel(x_test[:, np.newaxis], x_train)
-        offset_kernel = self.offset_vector(x_train, x_test, self.offset_scalar,
+        offset_kernel = self.offset_vector(x_train, x_test, self.get_rec_scalar,
                                            offset_range=offset_range or self.OFFSET_RANGE,
                                            offset_scale=offset_scale or self.OFFSET_SCALE,
                                            protection_width=protection_width or self.PROTECTION_WIDTH)
@@ -74,8 +71,8 @@ class Optimization:
         self.regrets.append(regret)
         for iteration in range(self.n_iterations):
             EI = self.expected_improvement(x_test, mu_star, var_star, xi=0.01)
-            v1=np.argmax(EI)
-            v2=x_test[v1]
+            v1 = np.argmax(EI)
+            v2 = x_test[v1]
             x_next = x_discrete(v2)
             y_next = f_discrete(x_next)
             regret = abs(optimal_value - y_next)  # Regret for this step
