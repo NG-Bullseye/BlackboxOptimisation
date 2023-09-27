@@ -74,8 +74,7 @@ class Sampler():
         return sign * self.sample_continues_not_normalized(x)
 
     def find_extrema(self):
-        self.fx_max=0.870605978254225
-        self.fx_min=0.8194274641249887
+
         if False:
             x_vals = np.linspace(-45, 45, 100000)  # 10,000 grid points
             f_vals_max = np.array([-self.objective_function([x], -1.0) for x in x_vals])
@@ -106,6 +105,9 @@ class Sampler():
                 plt.title("Test plot")
                 plt.show()
                 raise Exception("Warning: fx_max and fx_min are equal. This is not expected.")
+        else:
+            self.fx_max = 0.8591128004742136
+            self.fx_min = 0.762820976823689
 
     def sample_continues(self, x):
         if self.fx_max is None or self.fx_min is None:
@@ -507,7 +509,7 @@ if __name__ == '__main__':
         'offset_scale':    0.003+0.003,#1153434383380036 ,  #   0.18080060285014135,  # 0.6953434383380036
         'offset_range':    0.05+0.1  ,  # 24.979610423583395,  #  50.92663911701745
         'protection_width':5 ,  # 0.8845792950045508,  #  3.2715701918611297
-        'n_iterations': 1,
+        'n_iterations': 20,
         'randomseed': 524,
         'deactivate_rec_scalar': False,
         'plotting': True

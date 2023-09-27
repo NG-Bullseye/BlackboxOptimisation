@@ -26,9 +26,15 @@ class AnnealingSearch(Annealer):
         self.evaluated_points = []
 
     def move(self):
-        step_size =1.6#* (self.T / self.Tmax)# (self.T / self.Tmax)# np.random.uniform(3, 10) #  # scaling step size with T
+        step_size = np.random.uniform(-1, 1) * (self.T / self.Tmax)
+        if np.random.rand() > 0.5:
+            step_size *= -1
         new_state = self.state + step_size
-        self.state = np.clip(new_state, 0, 90)  # ensuring the state is within bounds
+        if new_state < 0:
+            new_state = -new_state
+        elif new_state > 90:
+            new_state = 180 - new_state
+        self.state = new_state
 
     def energy(self):
         y_value = self.app.sampler.f_discrete_real_data(np.array([self.state]))[0]
@@ -51,8 +57,8 @@ class SimAnnealSearch(RandomSearch):
     def anneal_search(self, bounds, iter):
         initial_state = np.random.uniform(*bounds)
         annealer = AnnealingSearch(initial_state, self.app)
-        annealer.Tmax = 2.1195791740292957#10000#
-        annealer.Tmin =0.49614060915361824 #1000#
+        annealer.Tmax = 72.8144532054362#40.053609667034365#5.55440115545034#6.831956948536803#3#2.1195791740292957#10000#
+        annealer.Tmin =3.62075859484068#4.273021838540448 #0.1016562260320483#0.10521097746714816#0.5#0.49614060915361824 #1000#
         annealer.steps = iter
         state, e ,eval_points= annealer.anneal()
         eval_points = np.array(eval_points)
@@ -83,11 +89,11 @@ class SimAnnealSearch(RandomSearch):
         annealer = AnnealingSearch(initial_state, self.app)
         annealer.Tmax = Tmax
         annealer.Tmin = Tmin
-        annealer.steps = 30
+        annealer.steps = 20
         state, e, _ = annealer.anneal()
         max_found_y = -e
         cum_reg = abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
-        return cum_reg
+        return max_found_y
 
 # Update the objective function
 def objective(sa_search, space):
@@ -99,9 +105,9 @@ def objective(sa_search, space):
 def run_hpOpt(sa_search):
     n_calls = 1000
     space = [
-        Real(0.5, 10.0, name="Tmax"),
-        Real(0.01, 1, name="Tmin"),
-        #Real(10, 500, name="iter")
+        Real(1, 1000.0, name="Tmax"),
+        Real(0.1, 100, name="Tmin"),
+        #Real(1, 10, name="step")
     ]
     objective_with_sa_search = objective(sa_search, space)
     with tqdm(total=n_calls, desc="Optimizing", bar_format="{l_bar}{bar} [ time left: {remaining} ]") as pbar:
@@ -127,11 +133,11 @@ def main(app,maxiter,n_repeats):
     return sa.for_range_of_iter()
 
 if __name__ == '__main__':
-    app = Application(Sampler(Sim()))
-    iter=30
-    n_repeats=100
+    app = Application(Sampler(Sim('Testdata')))
+    iter=20
+    n_repeats=200
     sa_search = SimAnnealSearch(app, iter, n_repeats)
-    hpopt=False
+    hpopt=True
     if hpopt:
         print(f"FINAL RESULTS SIMULATED ANNEALING: {run_hpOpt(sa_search)}")
     else:

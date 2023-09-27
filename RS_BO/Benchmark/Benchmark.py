@@ -170,4 +170,4 @@ class Benchmark:
         plt.savefig(f'{folder_name}/{file_name}')
 
 if __name__ == "__main__":
-    benchmark = Benchmark(scale=1, maxiter=20, n_repeats=400)
+    benchmark = Benchmark(scale=1, maxiter=5, n_repeats=10)
