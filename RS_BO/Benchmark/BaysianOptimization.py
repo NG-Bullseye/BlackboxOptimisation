@@ -148,12 +148,14 @@ class BaysianOptimization:
             optimizer = BayesianOptimization(
                 f=self.app.sampler.f_discrete_real_data_x,
                 pbounds={'x': (0, 90)},
-                random_state=1
+                random_state=1,
+                allow_duplicate_points=True
             )
 
             initial_point_x = np.random.uniform(0, 90, 1)[0]
             initial_point_y = self.app.sampler.f_discrete_real_data_x(initial_point_x)
             print(f'initial_point_x:{initial_point_x} initial_point_y:{initial_point_y}')
+            print(f"GLOBAL MAX: {self.app.sampler.getGlobalOptimum_Y()} \nGLOBAL MIN:  {self.app.sampler.getGlobalMin_Y()} ")
             optimizer.register(params={'x': initial_point_x}, target=initial_point_y)
             start_time = time.time()
 
@@ -212,8 +214,8 @@ def main(app,maxiter,n_repeats):
     return bo.run_BO_multiple_iterations(min_iter=0, max_iter=maxiter, step=1,plotting=False)
 
 if __name__ == '__main__':
-    app = Application(Sampler(Sim()))
-    print(f"FINAL RESULTS VANILLA BO: {main(app,2,200)}")
+    app = Application(Sampler(Sim("Testdata")))
+    print(f"FINAL RESULTS VANILLA BO: {main(app,10,5)}")
 
 
 #Average Cumulative Regret over 20 runs: 0.20757142857142857

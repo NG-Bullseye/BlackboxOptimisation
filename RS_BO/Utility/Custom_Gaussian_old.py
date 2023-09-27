@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class Optimization:
 
     def __init__(self, get_rec_scalar,quantization_factor=1, offset_range=5, offset_scale=0.1,
-                 kernel_scale=5, protection_width=1, n_iterations=3,callback_plotting=None,plotting=False,deactivate_rec_scalar=False):
+                 kernel_scale=5, protection_width=1, n_iterations=3):
         self.get_rec_scalar=get_rec_scalar
         self.n_iterations = n_iterations
         self.QUANTIZATION_FACTOR = quantization_factor
@@ -17,9 +17,6 @@ class Optimization:
         self.KERNEL_SCALE = kernel_scale
         self.PROTECTION_WIDTH = protection_width
         self.regrets = []
-        self.plotting  = plotting
-        self.callback_plotting=callback_plotting
-        self.no_rec_scalar=deactivate_rec_scalar
 
     def expected_improvement(self, X, mu, sigma, xi=0.01):
         mu_sample_opt = np.max(mu)
@@ -38,27 +35,12 @@ class Optimization:
     def protection_function(self, x, mu, protection_width):
         return 1 - (1 - np.exp(-(x - mu) ** 2 / (2 * protection_width ** 2)))
 
-    def exponential_smoothing(self,arr, alpha):
-        smoothed = np.zeros_like(arr)
-        smoothed[0] = arr[0]
-        for i in range(1, len(arr)):
-            smoothed[i] = alpha * arr[i] + (1 - alpha) * smoothed[i - 1]
-        return smoothed
-
     def offset_vector(self, x_train, x_test, offset_scalar_func, offset_range, offset_scale, protection_width):
         nearest_train_point = x_train[np.argmin(np.abs(x_test[:, np.newaxis] - x_train), axis=1)]
         mu = nearest_train_point
-        scalar_mat=offset_scalar_func(mu)
-        if False:
-            offset_range_offset = 0#offset_range+1
-            offset_scale_offset = 0#offset_scale+1
-            return 1
-        else:
-            offset_range_offset = scalar_mat *(0.11121) #offset_range * scalar_mat 0.003+0.003
-            offset_scale_offset = abs( scalar_mat) *(0.01251)  #-offset_scale * scalar_mat 0.05+0.1
-
-        protection_term = self.protection_function(x_test, mu, protection_width=3)
-        return self.perturbation(x_test, mu, offset_range_offset, offset_scale_offset, 0) * protection_term
+        a = offset_scale * offset_scalar_func(mu)
+        protection_term = self.protection_function(x_test, mu, protection_width)
+        return self.perturbation(x_test, mu, offset_range, a, 0) * protection_term
 
     def predict(self, x_train, y_train, x_test, kernel, x_discrete, offset_range=None, offset_scale=None,
                 protection_width=None):
@@ -75,25 +57,18 @@ class Optimization:
                                            offset_range=offset_range or self.OFFSET_RANGE,
                                            offset_scale=offset_scale or self.OFFSET_SCALE,
                                            protection_width=protection_width or self.PROTECTION_WIDTH)
-        alpha = 0.5  # Smoothing factor, 0 < alpha <= 1
-        smoothed_kernel = self.exponential_smoothing(offset_kernel, alpha)
         jitter = 1e-8
         K += np.eye(K.shape[0]) * jitter
-
-        mu_star = K_star  @ np.linalg.inv(K) @ y_train + smoothed_kernel
-        var_star = (self.kernel(x_test, x_test) + abs(smoothed_kernel)- np.einsum('ij,ij->i', K_star @ np.linalg.inv(K), K_star))
+        mu_star = K_star @ np.linalg.inv(K) @ y_train + offset_kernel
+        var_star = self.kernel(x_test, x_test) - np.einsum('ij,ij->i', K_star @ np.linalg.inv(K), K_star)
         return mu_star, var_star
 
     def optimize(self, x_train, y_train, x_test, f_discrete,x_discrete):
-
         mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel,x_discrete)
-
         var = f_discrete(x_test)
         optimal_value = np.max(var)  # Optimal value in the domain
         regret = abs(optimal_value - y_train)  # Regret for this step
         self.regrets.append(regret)
-        if self.plotting:
-            self.callback_plotting(x_test, x_train, y_train, mu_star, var_star)
         for iteration in range(self.n_iterations):
             EI = self.expected_improvement(x_test, mu_star, var_star, xi=0.01)
             v1 = np.argmax(EI)
@@ -109,8 +84,6 @@ class Optimization:
             #smoothing
             #var_star = gaussian_filter1d(var_star, sigma=1.0)
             #mu_star = gaussian_filter1d(mu_star, sigma=1.0)
-            if self.plotting:
-                self.callback_plotting(x_test,x_train,y_train, mu_star, var_star)
         return x_train, y_train, mu_star, var_star
 
     def get_cumulative_regret(self):

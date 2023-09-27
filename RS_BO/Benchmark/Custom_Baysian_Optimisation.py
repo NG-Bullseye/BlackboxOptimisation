@@ -33,13 +33,13 @@ class RealDataOptimization:
         # Parameters for start_sim_with_real_data
         self.params = {
             'quantization_factor': 1,
-            'kernel_scale': 0.09805098972579881,  # 2.221461291655982
-            'offset_scale': 0.18080060285014135,  # 0.6953434383380036
-            'offset_range': 24.979610423583395,  # 50.92663911701745
-            'protection_width': 0.8845792950045508,  #3.2715701918611297
-            'n_iterations': maxiter,
+            'kernel_scale': 6.021461291655982,  # 0.09805098972579881,  # 2.221461291655982
+            'offset_scale': 0.0253434383380036,  # 0.18080060285014135,  # 0.6953434383380036
+            'offset_range': 30.92663911701745,  # 24.979610423583395,  #  50.92663911701745
+            'protection_width': 3.2715701918611297,  # 0.8845792950045508,  #  3.2715701918611297
+            'n_iterations': 0,
             'randomseed': 524,
-            'deactivate_rec_scalar': deactivate_rec_scalar
+            'deactivate_rec_scalar': False
         }
 
     def timeit(self, method):
@@ -67,7 +67,7 @@ class RealDataOptimization:
         total_time = self.end_time - self.start_time
         return optimal_x, optimal_fx, total_time, cum_regret
 
-    def for_range_of_iter(self):
+    def for_range_of_iter(self,plotting=False):
         average_optimal_fxs=[]
         average_cum_regrets=[]
 
@@ -80,6 +80,7 @@ class RealDataOptimization:
                 randomseed = random.seed(int(current_time * 1e9))
                 self.params['randomseed'] = randomseed
                 self.params['n_iterations']=iter
+                self.params['plotting']=plotting
                 results = self.timeit(lambda: self.app.start_sim_with_real_data(**self.params))
                 optimal_x, max_found_y, time_taken, cumulative_regret = self.get_metrics(results)
                 times.append(time_taken)
@@ -141,13 +142,13 @@ class RealDataOptimization:
     # Run the benchmark
 def main(app,maxiter,n_repeats,plotting=False):
     # Run the benchmark
-    benchmark = RealDataOptimization(app, n_repeats=n_repeats,maxiter=maxiter+1)
-    avg_optimal_fxs,avg_cum_regrets = benchmark.for_range_of_iter()
+    cboMain = RealDataOptimization(app, n_repeats=n_repeats,maxiter=maxiter+1)
+    avg_optimal_fxs,avg_cum_regrets = cboMain.for_range_of_iter(plotting)
     print(f"Found optima: fx={avg_optimal_fxs}")
     print(f"With {n_repeats} repeats for every of the {maxiter} iterations ")
     if plotting:
         #benchmark.plot_performance(maxiter,avg_optimal_fxs)
-        benchmark.plot_graph(maxiter, avg_optimal_fxs)
+        cboMain.plot_graph(maxiter, avg_optimal_fxs)
     return avg_optimal_fxs, avg_cum_regrets
 def main_no_rec(app,maxiter,n_repeats,plotting=False):
     # Run the benchmark
@@ -161,10 +162,10 @@ def main_no_rec(app,maxiter,n_repeats,plotting=False):
     return avg_optimal_fxs, avg_cum_regrets
 
 if __name__ == '__main__':
-    app=Application(Sampler(Sim()))
-    maxiter = 1
-    n_repeats = 200
-    avg_optimal_fxs,avg_cum_regrets= main_no_rec(app,maxiter, n_repeats,plotting=True)
+    app=Application(Sampler(Sim("Testdata")))
+    maxiter = 5
+    n_repeats = 1
+    avg_optimal_fxs,avg_cum_regrets= main(app,maxiter, n_repeats,plotting=True)
     print(f"FINAL RESULTS CUSTOM BO: \navg_optimal_fxs: {avg_optimal_fxs} \navg_cum_regrets:{avg_cum_regrets}")
 
 #FINAL RESULTS CUSTOM BO:

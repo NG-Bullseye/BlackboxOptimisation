@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 class Benchmark:
     def __init__(self, scale=1, maxiter=1, n_repeats=1):
-        self.app = Application(Sampler(Sim("FinalDB")))
+        self.app = Application(Sampler(Sim("Testdata")))
         self.maxiter = maxiter
         self.n_repeats = n_repeats
         self.scale = scale
@@ -170,4 +170,4 @@ class Benchmark:
         plt.savefig(f'{folder_name}/{file_name}')
 
 if __name__ == "__main__":
-    benchmark = Benchmark(scale=1, maxiter=1, n_repeats=1)
+    benchmark = Benchmark(scale=1, maxiter=20, n_repeats=400)
