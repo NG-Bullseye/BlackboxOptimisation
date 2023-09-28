@@ -30,18 +30,20 @@ class BaysianOptimization:
         self.all_evals = []
 
     def run_BO_multiple_iterations(self,min_iter, max_iter, plotting, step=1):
+        var_fxs =[]
         for maxiter in range(min_iter, max_iter + 1, step):
             print(f"Running BO with maxiter = {maxiter}")
-            avg_optimal_fx = self.bo(maxiter,plotting)
+            avg_optimal_fx, max_found_y_values = self.bo(maxiter,plotting)
 
             self.average_optimal_fxs.append(avg_optimal_fx)
+            var_fxs.append(self.track_variance(max_found_y_values))
             self.maxiter_list.append(maxiter)
             print(f"INFO: Appending {avg_optimal_fx} to average_optimal_fxs")
             print(f"CURRENT: maxiter_list: {self.maxiter_list}")
             print(f"CURRENT: average_optimal_fxs (index is iteration): {self.average_optimal_fxs}")
         if plotting:
             self.plot_performance(max_iter)
-        return self.average_optimal_fxs, self.average_cum_reg
+        return self.average_optimal_fxs, self.average_cum_reg,var_fxs
 
     def plot_samples_old(self):
         yaw_acc = app.sampler.yaw_acc
@@ -130,6 +132,8 @@ class BaysianOptimization:
         plt.legend()
         plt.show()
 
+    def track_variance(self, max_found_y_list):
+        return np.var(max_found_y_list)
     def bo(self, maxiter, plotting):
         global cum_regrets, optimal_xs, optimal_fxs, n_evals, times
         # Reset the summary arrays
@@ -139,8 +143,10 @@ class BaysianOptimization:
         cum_regrets_for_this_maxiter=[]
         n_eval=0
         # Bayesian Optimization
-
+        max_found_y_values = []
         for i in range(self.n_repeats):
+            self.app.sampler.evaluated_fx=[]
+
             self.app.sampler.sampled_values_for_vanilla_bo = []
             np.random.seed(random.seed(int(time.perf_counter() * 1e9)))
             self.all_evals.clear()
@@ -151,7 +157,6 @@ class BaysianOptimization:
                 random_state=1,
                 allow_duplicate_points=True
             )
-
             initial_point_x = np.random.uniform(0, 90, 1)[0]
             initial_point_y = self.app.sampler.f_discrete_real_data_x(initial_point_x)
             print(f'initial_point_x:{initial_point_x} initial_point_y:{initial_point_y}')
@@ -172,6 +177,8 @@ class BaysianOptimization:
             self.app.sampler.function_call_counter = 0
 
             optimal_for_this_maxiter_x, optimal_for_this_maxiter_y = result['params']['x'], result['target']
+            max_found_y_values.append(optimal_for_this_maxiter_y) # needed for variance
+
             if len(self.app.sampler.regrets)!= maxiter+1:
                 print(f"ERROR  len(self.app.sampler.regrets)!= maxiter maxiter{maxiter} len(self.app.sampler.regrets){len(self.app.sampler.regrets)}")
             a=len(self.app.sampler.regrets)
@@ -182,8 +189,10 @@ class BaysianOptimization:
             optimal_for_this_maxiter_fxs.append(optimal_for_this_maxiter_y)
 
             times.append(time_taken)
+
             if plotting:
                 self.plot_samples()
+
         n_evals.append(n_eval)
         avg_cum_regrets_for_this_maxiter = np.mean(cum_regrets_for_this_maxiter[-self.n_repeats:])
         avg_optimal_for_this_maxiter_fxs = np.mean(optimal_for_this_maxiter_fxs[-self.n_repeats:])
@@ -205,7 +214,7 @@ class BaysianOptimization:
         print("------------------------------------------------------------------")
         print(f'Global optima: x={global_optima_key} y={global_optima_value}')
 
-        return avg_optimal_for_this_maxiter_fxs
+        return avg_optimal_for_this_maxiter_fxs, max_found_y_values
 
 
 

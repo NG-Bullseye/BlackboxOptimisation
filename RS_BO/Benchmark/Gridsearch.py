@@ -98,21 +98,25 @@ class Gridsearch:
     #        grid_points.append(x_value)  # Collect individual grid points
     #    return max_found_y, grid_points,cumreg  # Return individual grid points
 
-
+    def track_variance(self,max_found_y_list):
+        return np.var(max_found_y_list)
     def for_range_of_iter(self, enable_plot=False, enable_plot_grid=False):
         iter_values = []
         average_optimal_fxs=[]
         average_cumregs=[]
+        var_fxs = []
         for num_iterations in range(1,self.maxiter+1):
             avg_optimal_fx = 0
             avg_cumreg=0
+            max_found_y_values = []
             for run in range(self.n_repeats):
-
                 max_found_y, grid_points ,cumreg= self.grid_search([0, 90], num_iterations ,shift=True)
                 avg_optimal_fx += max_found_y
                 avg_cumreg+=cumreg
+                max_found_y_values.append(max_found_y)
                 if self.enable_plot_grid:
                     self.plot_grid(grid_points, [0, 90])  # Plot the grid points of a single run
+            var_fxs.append(self.track_variance(max_found_y_values))
             avg_optimal_fx /= self.n_repeats
             avg_cumreg /= self.n_repeats
             average_optimal_fxs.append(avg_optimal_fx)  # Directly append to list
@@ -121,7 +125,7 @@ class Gridsearch:
 
         if enable_plot:
             self.plot_data([i[0] for i in iter_values], [i[1] for i in iter_values],True)
-        return average_optimal_fxs,average_cumregs
+        return average_optimal_fxs,average_cumregs,var_fxs
 
     def calculate_averages(self,iter_values, n_repeats):
         average_optimal_fxs = [y / n_repeats for (_, y) in iter_values]

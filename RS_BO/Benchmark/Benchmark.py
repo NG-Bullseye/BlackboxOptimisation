@@ -22,23 +22,35 @@ class Benchmark:
 
         iterations = list(range(0, self.maxiter + 1))
 
-        RS_avg_optimal_fxs, RS_avg_cum_regrets = RSmain(self.app, self.maxiter, self.n_repeats)
+        RS_avg_optimal_fxs, RS_avg_cum_regrets, RS_var_fxs = RSmain(self.app, self.maxiter, self.n_repeats)
         print(f"FINAL RESULTS RANDOMSEARCH: \navg_optimal_fxs: {RS_avg_optimal_fxs} \navg_cum_regrets:{RS_avg_cum_regrets}")
 
-        SA_avg_optimal_fxs, SA_avg_cum_regrets = SAmain(self.app, self.maxiter, self.n_repeats)
+        SA_avg_optimal_fxs, SA_avg_cum_regrets, SA_var_fxs = SAmain(self.app, self.maxiter, self.n_repeats)
         print(f"FINAL RESULTS RANDOMSEARCH: \navg_optimal_fxs: {SA_avg_optimal_fxs} \navg_cum_regrets:{SA_avg_cum_regrets}")
 
-        BO_avg_optimal_fxs, BO_avg_cum_regrets = BOmain(self.app, self.maxiter, self.n_repeats)
+        BO_avg_optimal_fxs, BO_avg_cum_regrets, BO_var_fxs = BOmain(self.app, self.maxiter, self.n_repeats)
         print(f"FINAL RESULTS VANILLA BO: \navg_optimal_fxs: {BO_avg_optimal_fxs} \navg_cum_regrets:{BO_avg_cum_regrets}")
 
-        GS_avg_optimal_fxs, GS_avg_cum_regrets = GSmain(self.app, self.maxiter, self.n_repeats)
+        GS_avg_optimal_fxs, GS_avg_cum_regrets, GS_var_fxs= GSmain(self.app, self.maxiter, self.n_repeats)
         print(f"FINAL RESULTS GRIDSEARCH: \navg_optimal_fxs: {GS_avg_optimal_fxs} \navg_cum_regrets:{GS_avg_cum_regrets}")
 
-        CBO_avg_optimal_fxs, CBO_avg_cum_regrets = CBOmain(self.app, self.maxiter, self.n_repeats)
+        CBO_avg_optimal_fxs, CBO_avg_cum_regrets, CBO_var_fxs = CBOmain(self.app, self.maxiter, self.n_repeats)
         print(f"FINAL RESULTS CUSTOM BO: \navg_optimal_fxs: {CBO_avg_optimal_fxs} \navg_cum_regrets:{CBO_avg_cum_regrets}")
 
-        CBO_no_rec_avg_optimal_fxs, CBO_no_rec_avg_cum_regrets = CBO_no_rec_main(self.app, self.maxiter, self.n_repeats)
+        CBO_no_rec_avg_optimal_fxs, CBO_no_rec_avg_cum_regrets, CBO_no_rec_var_fxs = CBO_no_rec_main(self.app, self.maxiter, self.n_repeats)
         print(f"FINAL RESULTS CUSTOM BO: \navg_optimal_fxs: {CBO_no_rec_avg_optimal_fxs} \navg_cum_regrets:{{CBO_no_rec_avg_cum_regrets}}")
+        # Sample usage
+
+
+        self.plot_graph_optimal_fx_var(iterations,
+                                  RandomSearch=RS_var_fxs,
+                                  SimulatedAnnealing=SA_var_fxs,
+                                  BayesianOptimization=BO_var_fxs,
+                                  GridSearch=GS_var_fxs,
+                                  CustomBO=CBO_var_fxs,
+                                  CustomBONoRec=CBO_no_rec_var_fxs)
+
+
         self.plot_regret_graph(iterations,
                                GS_avg_cum_regrets,
                                BO_avg_cum_regrets,
@@ -119,6 +131,21 @@ class Benchmark:
         df.to_csv(filename, index=False)
         print(f"Data stored in {filename}")
 
+    def plot_graph_optimal_fx_var(self,iterations, **kwargs):
+        plt.figure(figsize=(12, 8))
+
+        for algo_name, var_fxs in kwargs.items():
+            plt.plot(iterations, var_fxs, label=algo_name)
+
+        plt.title("Variance of f(x)")
+        plt.xlabel('Iterations')
+        plt.ylabel("Variance of f(x)")
+        plt.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+
     def plot_regret_graph(self, iterations, GS_regrets, BO_regrets, CBO_regrets, CBO_no_rec, RS_regrets,
                           SA_avg_optimal_fxs):
         fig, ax1 = plt.subplots(figsize=(10 * self.scale, 6 * self.scale))
@@ -170,4 +197,4 @@ class Benchmark:
         plt.savefig(f'{folder_name}/{file_name}')
 
 if __name__ == "__main__":
-    benchmark = Benchmark(scale=1, maxiter=5, n_repeats=10)
+    benchmark = Benchmark(scale=1, maxiter=20, n_repeats=400)

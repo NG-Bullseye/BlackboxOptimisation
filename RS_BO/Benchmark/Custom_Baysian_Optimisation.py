@@ -66,16 +66,19 @@ class RealDataOptimization:
         optimal_fx = self.app.optimal_fx
         total_time = self.end_time - self.start_time
         return optimal_x, optimal_fx, total_time, cum_regret
-
+    def track_variance(self,max_found_y_list):
+        return np.var(max_found_y_list)
     def for_range_of_iter(self,plotting=False):
         average_optimal_fxs=[]
         average_cum_regrets=[]
-
+        var_fxs = []
         for iter in range(0,self.maxiter):
             times = []
             avg_optimal_fx = 0
             avg_cum_reg = 0
+            max_found_y_values = []
             for _ in range(self.n_repeats):
+                self.app.sampler.evaluated_x=[]
                 current_time = time.perf_counter()
                 randomseed = random.seed(int(current_time * 1e9))
                 self.params['randomseed'] = randomseed
@@ -83,10 +86,11 @@ class RealDataOptimization:
                 self.params['plotting']=plotting
                 results = self.timeit(lambda: self.app.start_sim_with_real_data(**self.params))
                 optimal_x, max_found_y, time_taken, cumulative_regret = self.get_metrics(results)
+                max_found_y_values.append(max_found_y)
                 times.append(time_taken)
-
                 avg_optimal_fx += max_found_y  # Update it directly here
                 avg_cum_reg += cumulative_regret
+            var_fxs.append(self.track_variance(max_found_y_values))
             avg_optimal_fx /= self.n_repeats
             avg_cum_reg /= self.n_repeats
             average_optimal_fxs.append(avg_optimal_fx)  # Directly append to list
@@ -99,7 +103,7 @@ class RealDataOptimization:
             print(f"CURRENT: maxiter: {self.maxiter}")
             print(f"CURRENT: average_optimal_fxs (index is iteration): {average_optimal_fxs}")
         #self.plot_performance(maxiter,average_optimal_fxs)
-        return average_optimal_fxs, average_cum_regrets
+        return average_optimal_fxs, average_cum_regrets,var_fxs
 
 
     def plot_graph(self, iterations,CBO_fxs):
@@ -143,29 +147,29 @@ class RealDataOptimization:
 def main(app,maxiter,n_repeats,plotting=False):
     # Run the benchmark
     cboMain = RealDataOptimization(app, n_repeats=n_repeats,maxiter=maxiter+1)
-    avg_optimal_fxs,avg_cum_regrets = cboMain.for_range_of_iter(plotting)
+    avg_optimal_fxs,avg_cum_regrets ,var_fxs= cboMain.for_range_of_iter(plotting)
     print(f"Found optima: fx={avg_optimal_fxs}")
     print(f"With {n_repeats} repeats for every of the {maxiter} iterations ")
     if plotting:
         #benchmark.plot_performance(maxiter,avg_optimal_fxs)
         cboMain.plot_graph(maxiter, avg_optimal_fxs)
-    return avg_optimal_fxs, avg_cum_regrets
+    return avg_optimal_fxs, avg_cum_regrets ,var_fxs
 def main_no_rec(app,maxiter,n_repeats,plotting=False):
     # Run the benchmark
-    benchmark = RealDataOptimization(app, n_repeats=n_repeats, maxiter=maxiter + 1,deactivate_rec_scalar=True)
-    avg_optimal_fxs, avg_cum_regrets = benchmark.for_range_of_iter()
+    cbo = RealDataOptimization(app, n_repeats=n_repeats, maxiter=maxiter + 1,deactivate_rec_scalar=True)
+    avg_optimal_fxs, avg_cum_regrets,var_fxs = cbo.for_range_of_iter()
     print(f"Found optima: fx={avg_optimal_fxs}")
     print(f"With {n_repeats} repeats for every of the {maxiter} iterations ")
     if plotting:
         # benchmark.plot_performance(maxiter,avg_optimal_fxs)
-        benchmark.plot_graph(maxiter, avg_optimal_fxs)
-    return avg_optimal_fxs, avg_cum_regrets
+        cbo.plot_graph(maxiter, avg_optimal_fxs)
+    return avg_optimal_fxs, avg_cum_regrets,var_fxs
 
 if __name__ == '__main__':
     app=Application(Sampler(Sim("Testdata")))
-    maxiter = 5
-    n_repeats = 1
-    avg_optimal_fxs,avg_cum_regrets= main(app,maxiter, n_repeats,plotting=True)
+    maxiter = 4
+    n_repeats = 0
+    avg_optimal_fxs,avg_cum_regrets,var_fxs= main(app,maxiter, n_repeats,plotting=True)
     print(f"FINAL RESULTS CUSTOM BO: \navg_optimal_fxs: {avg_optimal_fxs} \navg_cum_regrets:{avg_cum_regrets}")
 
 #FINAL RESULTS CUSTOM BO:

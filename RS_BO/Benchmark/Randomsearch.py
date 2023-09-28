@@ -18,6 +18,7 @@ class RandomSearch:
         lower_bound, upper_bound = bounds
         max_found_y = float('-inf')
         cum_reg=0
+
         for i in range(iter):
             # Single random point
             x_value = np.random.uniform(lower_bound, upper_bound)
@@ -44,20 +45,26 @@ class RandomSearch:
         plt.savefig('random_search_performance.png')
         plt.show()
 
+    # Function to calculate variance
+    def track_variance(self,max_found_y_list):
+        return np.var(max_found_y_list)
     def for_range_of_iter(self, early_stop_threshold=100, enable_plot=False):
         #iter_values = []
         average_optimal_fxs=[]
         average_cumregs=[]
-
+        var_fxs = []
         for iter in range(1,self.maxiter+1):
             avg_optimal_fx = 0
             avg_cum_reg = 0
+            max_found_y_values = []
             for run in range(self.n_repeats):
                 current_time = time.time()
                 random.seed(int(current_time * 1e9))
                 max_found_y,cum_regret = self.random_search([0, 90],iter)
                 avg_optimal_fx += max_found_y  # Update it directly here
                 avg_cum_reg += cum_regret
+                max_found_y_values.append(max_found_y)
+            var_fxs.append(self.track_variance(max_found_y_values))
             avg_optimal_fx /= self.n_repeats
             avg_cum_reg /= self.n_repeats
             average_optimal_fxs.append(avg_optimal_fx)  # Directly append to list
@@ -65,10 +72,10 @@ class RandomSearch:
 
         #if enable_plot:
             #self.plot_data([i[0] for i in average_optimal_fxs], [i[1] for i in average_optimal_fxs])
-        return average_optimal_fxs,average_cumregs
+        return average_optimal_fxs,average_cumregs,var_fxs
 
     def test(self, iteration, num_executions):
-        self.app = Application(Sampler(Sim()))
+        self.app = Application(Sampler(Sim("Testdata")))
         optimal_values = []
 
         # Execute the algorithm multiple times and store optimal_values
@@ -79,7 +86,7 @@ class RandomSearch:
         # Count frequency of each optimal_value
         frequency_count = defaultdict(int)
         for value in optimal_values:
-            rounded_value = round(value, 2)  # Round to two decimal places
+            rounded_value = value  # Round to two decimal places
             frequency_count[rounded_value] += 1
 
         # Convert frequency count to probabilities
@@ -107,7 +114,7 @@ def main(app,maxiter,n_repeats):
     return rs.for_range_of_iter()
 
 if __name__ == '__main__':
-    app = Application(Sampler(Sim()))
+    app = Application(Sampler(Sim("Testdata")))
     rs = RandomSearch(app, 0 + 1, 1)
     rs.test(iteration = 1,num_executions = 1000)
     #print(f"FINAL RESULTS RANDOMSEARCH: {main(app,0,1111)}")

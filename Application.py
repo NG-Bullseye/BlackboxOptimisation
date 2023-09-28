@@ -11,7 +11,11 @@ from typing import Optional
 from scipy.interpolate import interp1d
 from RS_BO.Utility.Sim import Sim
 from scipy.interpolate import interp1d
+import matplotlib
+matplotlib.use('Qt5Agg') # Make sure you have PyQt5 or PySide2 installed
 import matplotlib.pyplot as plt
+
+
 import os
 from scipy.ndimage import gaussian_filter1d
 class PolynomialPredictor:
@@ -40,8 +44,8 @@ class PolynomialPredictor:
         intercept_value = self.intercept
         # Calculate the final value of the polynomial equation
         y_poly = intercept_value + weighted_sum
-        if (y_poly>1).any() and len(self.coefficients)> 5:
-            print("not good")
+        if (y_poly>1).any() and len(self.coefficients)> 6:
+            print(f"not good y_poly > 1 {y_poly} and len(self.coefficients) is {len(self.coefficients)}")
         return y_poly
 class PolynomialPredictor_Acc(PolynomialPredictor):
     def __init__(self, csv_file):
@@ -52,6 +56,8 @@ class PolynomialPredictor_Rec(PolynomialPredictor):
 
 class Sampler():
     def __init__(self, dataObj):
+        self.evaluated_x = []
+        self.evaluated_fx = []
         self.sampled_values_for_vanilla_bo = []
         self.regrets = np.array([])
         self.function_call_counter = 0
@@ -68,6 +74,8 @@ class Sampler():
         self.acc_predictor=PolynomialPredictor_Acc(f'/home/lwecke/PycharmProjects/flow_regime_recognition_CameraPosition/modules/Bulktrain/fittedPolynomial_acc.csv')
         self.rec_predictor=PolynomialPredictor_Rec(f'/home/lwecke/PycharmProjects/flow_regime_recognition_CameraPosition/modules/Bulktrain/fittedPolynomial_rec.csv')
         self.find_extrema()  # Find extrema during object initialization
+        self.max_rec=150
+        self.min_rec=-150
 
     def objective_function(self, x, sign=1.0):
         x = np.atleast_1d(x)
@@ -106,26 +114,59 @@ class Sampler():
                 plt.show()
                 raise Exception("Warning: fx_max and fx_min are equal. This is not expected.")
         else:
-            self.fx_max = 0.8591128004742136
-            self.fx_min = 0.762820976823689
+            self.fx_max =0.8579445786858448
+            self.fx_min = 0.8193933891878757
 
     def sample_continues(self, x):
         if self.fx_max is None or self.fx_min is None:
             raise Exception("fx_max and fx_min cannot be None, recheck function extrema.")
 
         y_value = self.sample_continues_not_normalized(x)
-        if y_value > self.fx_max or y_value < self.fx_min: pass
+        if y_value > self.fx_max or y_value < self.fx_min:pass
             #raise Exception(f"{y_value} > {self.fx_max} or {y_value} < {self.fx_min} = False")
         normalized_y = (y_value - self.fx_min) / (self.fx_max - self.fx_min)
-        if normalized_y > 1 or normalized_y < 0: pass
+        if normalized_y > 1 or normalized_y < 0:pass
             #raise Exception(f"{normalized_y} > 1 or {normalized_y} < 0 = False")
         return normalized_y
     def sample_continues_not_normalized(self, x_values):
         y_values = self.acc_predictor.fn(x_values)
         return y_values
+
+    import numpy as np
+    def compute_metric(self, alpha=0.8, beta=2.0):
+        x_train=self.evaluated_x
+        n = len(x_train)
+        if n < 2:
+            return 1  # Not enough elements to compute metric
+
+        metric = 0.0
+        total_weight = 0.0
+
+        for i in range(1, n):
+            weight = (alpha ** (n - i)) * (beta ** (i - n + 1))
+            diff = abs(x_train[i] - x_train[i - 1])
+            metric += weight * diff
+            total_weight += weight
+
+        # Normalize the metric
+        metric /= total_weight
+
+        # Compute the closeness metric, where 1 means very close and 0 means not close
+        closeness_metric =  1 / (1 + metric)
+
+        return closeness_metric
     def get_recscalar_of_x_continues(self, x_values):
+        self.evaluated_fx.append(x_values[0])
         rec_scalar = self.rec_predictor.fn(x_values)
-        return rec_scalar
+
+        def nonlinear_scale(value):
+            scaled_value = np.sign(value) * np.power(np.abs(value), 0.5)
+            scaled_value[np.abs(scaled_value) < 50] = np.sign(scaled_value[np.abs(scaled_value) < 50]) * np.power(
+                np.abs(scaled_value[np.abs(scaled_value) < 50]), 3)
+            return scaled_value
+
+        rec_scalar_scaled = nonlinear_scale(rec_scalar)*self.compute_metric( alpha=0.8, beta=2.0)
+        return rec_scalar_scaled
     def sample(self, yaw_string):
         raise Exception("DEPRECIATED")
         #number = float("".join(filter(lambda ch: ch.isdigit() or ch == "." or ch == "-", yaw_string)))
@@ -202,6 +243,7 @@ class Sampler():
 
         self.calculateRegret(sampled_accs)#hier muss regret berechnet werden! damit der in debugopt2 angegeben werden kann über das app.sampler obj
         self.sampled_values_for_vanilla_bo.append(self.x_discrete_real_data(yaw_value))
+        self.evaluated_fx.append(sampled_accs[0])
         return sampled_accs[0]
 
     def x_discrete_real_data_unshifted(self, yaws):
@@ -510,7 +552,7 @@ if __name__ == '__main__':
         'offset_range':    0.05+0.1  ,  # 24.979610423583395,  #  50.92663911701745
         'protection_width':5 ,  # 0.8845792950045508,  #  3.2715701918611297
         'n_iterations': 20,
-        'randomseed': 524,
+        'randomseed': 524144,
         'deactivate_rec_scalar': False,
         'plotting': True
     }
