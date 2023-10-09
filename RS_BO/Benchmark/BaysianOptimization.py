@@ -4,9 +4,9 @@ import time
 from bayes_opt import BayesianOptimization
 from matplotlib import pyplot as plt
 
-from Application import Application, Sampler
+from RS_BO.Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
-from sklearn.gaussian_process.kernels import Matern, WhiteKernel
+
 
 class BaysianOptimization:
     def __init__(self,app,maxiter,n_repeats):
@@ -181,7 +181,6 @@ class BaysianOptimization:
 
             if len(self.app.sampler.regrets)!= maxiter+1:
                 print(f"ERROR  len(self.app.sampler.regrets)!= maxiter maxiter{maxiter} len(self.app.sampler.regrets){len(self.app.sampler.regrets)}")
-            a=len(self.app.sampler.regrets)
             cum_regret = np.sum(self.app.sampler.regrets)
 
             cum_regrets_for_this_maxiter.append(cum_regret)

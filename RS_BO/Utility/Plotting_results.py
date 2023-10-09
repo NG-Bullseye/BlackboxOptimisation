@@ -5,8 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from scipy import interpolate
-from statsmodels.nonparametric.smoothers_lowess import lowess  # Importing lowess
-from Application import Application, Sampler
+from RS_BO.Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
 
 

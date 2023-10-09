@@ -2,10 +2,8 @@ import random
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-
-from Application import Application, Sampler  # Make sure to import Application and Sampler from your file
+from RS_BO.Application import Application, Sampler  # Make sure to import Application and Sampler from your file
 from RS_BO.Utility.Sim import Sim
-
 # Initialize the application with a Sampler instance
 class Gridsearch:
     def __init__(self,app,maxiter,n_repeats):
@@ -76,27 +74,9 @@ class Gridsearch:
         for x_value in grid_points:
             y_value = self.app.sampler.f_discrete_real_data_x(x_value)
             max_found_y = max(max_found_y, y_value)
-            cumreg += abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
+            cumreg += abs(y_value - self.app.sampler.getGlobalOptimum_Y())
 
         return max_found_y, grid_points, cumreg
-    #def grid_search(self,bounds, num_iterations):
-    #    lower_bound, upper_bound = bounds
-    #    if num_iterations == 1:
-    #        step_size = 0  # or whatever makes sense in this context
-    #    else:
-    #        step_size = (upper_bound - lower_bound) / (num_iterations - 1)
-#
-    #    max_found_y = float('-inf')
-    #    grid_points = []  # Added list to collect individual grid points
-    #    cumreg=0
-    #    for i in range(num_iterations):
-    #        x_value = lower_bound + i * step_size
-    #        y_value = self.app.sampler.f_discrete_real_data_x(x_value)
-    #        max_found_y = max(max_found_y, y_value)
-    #        print(f"y_value:{y_value} x_value:{x_value}")
-    #        cumreg+=abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
-    #        grid_points.append(x_value)  # Collect individual grid points
-    #    return max_found_y, grid_points,cumreg  # Return individual grid points
 
     def track_variance(self,max_found_y_list):
         return np.var(max_found_y_list)
@@ -133,12 +113,6 @@ class Gridsearch:
         average_cum_reg = [abs(y - global_max) / n_repeats for (_, y) in iter_values]
 
         return average_optimal_fxs, average_cum_reg
-
-
-# Example usage
-
-
-
 
 def main(app,maxiter,n_repeats):
     gridsearch=Gridsearch(app,maxiter+1,n_repeats)#+1 because there is no initial gussee like in bo

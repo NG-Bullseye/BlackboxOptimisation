@@ -1,23 +1,14 @@
 import csv
 from scipy.optimize import minimize
-
 import numpy as np
-from scipy.optimize import differential_evolution
-
 from RS_BO.Custom_Gaussian import Optimization as opt
-import matplotlib.pyplot as plt
 from datetime import datetime
-from typing import Optional
-from scipy.interpolate import interp1d
 from RS_BO.Utility.Sim import Sim
 from scipy.interpolate import interp1d
 import matplotlib
 matplotlib.use('Qt5Agg') # Make sure you have PyQt5 or PySide2 installed
 import matplotlib.pyplot as plt
-
-
 import os
-from scipy.ndimage import gaussian_filter1d
 class PolynomialPredictor:
     def __init__(self, csv_file):
         with open(csv_file, 'r') as csvfile:
@@ -25,7 +16,6 @@ class PolynomialPredictor:
             coeff = [float(x) for x in next(csv_reader)]
             self.intercept = coeff[0]
             self.coefficients = np.array(coeff[1:])
-
     def fn(self, x):
         # Initialize variables to keep track of polynomial elements and index
         x_poly_elements = []
@@ -76,6 +66,7 @@ class Sampler():
         self.find_extrema()  # Find extrema during object initialization
         self.max_rec=150
         self.min_rec=-150
+        self.findMaxima= True
 
     def objective_function(self, x, sign=1.0):
         x = np.atleast_1d(x)
@@ -83,7 +74,7 @@ class Sampler():
 
     def find_extrema(self):
 
-        if False:
+        if self.findMaxima:
             x_vals = np.linspace(-45, 45, 100000)  # 10,000 grid points
             f_vals_max = np.array([-self.objective_function([x], -1.0) for x in x_vals])
             f_vals_min = np.array([self.objective_function([x], 1.0) for x in x_vals])
@@ -113,7 +104,7 @@ class Sampler():
                 plt.title("Test plot")
                 plt.show()
                 raise Exception("Warning: fx_max and fx_min are equal. This is not expected.")
-        else:
+        else: #set maximum manualy to speed up runtime
             self.fx_max =0.8579445786858448
             self.fx_min = 0.8193933891878757
 
@@ -138,7 +129,6 @@ class Sampler():
         n = len(x_train)
         if n < 2:
             return 1  # Not enough elements to compute metric
-
         metric = 0.0
         total_weight = 0.0
 
@@ -147,10 +137,8 @@ class Sampler():
             diff = abs(x_train[i] - x_train[i - 1])
             metric += weight * diff
             total_weight += weight
-
         # Normalize the metric
         metric /= total_weight
-
         # Compute the closeness metric, where 1 means very close and 0 means not close
         closeness_metric =  1 / (1 + metric)
 
@@ -169,11 +157,6 @@ class Sampler():
         return rec_scalar_scaled
     def sample(self, yaw_string):
         raise Exception("DEPRECIATED")
-        #number = float("".join(filter(lambda ch: ch.isdigit() or ch == "." or ch == "-", yaw_string)))
-        #yaw = self.get_closest_key(self.yaw_acc, number)  # Convert yaw_string to float
-        #acc = self.yaw_acc.get(yaw)
-        #return acc
-
     def get_closest_key(self,d, value, tolerance=1e-2):
         closest_key = None
         closest_distance = float('inf')
@@ -207,7 +190,6 @@ class Sampler():
             sampled_acc = self.sample_continues(yaw_value)
             sampled_accs.append(sampled_acc)
         return sampled_accs
-
 
     def calculateRegret(self, y_array):
         y_array = np.array(y_array)
@@ -251,38 +233,10 @@ class Sampler():
             yaws = np.array([yaws])
         return yaws
 
-        #result = []
-        #for yaw_value in yaws:
-        #    closest_yaw = None
-        #    min_diff = float('inf')  # Initialize with infinity
-        #    positive_yaw_list = self.yaw_list
-        #    for yaw in positive_yaw_list:
-        #        diff = abs(yaw_value - yaw)
-        #        if diff < min_diff:
-        #            min_diff = diff
-        #            closest_yaw = yaw
-#
-        #    result.append(closest_yaw)
-        #return result
     def x_discrete_real_data(self, yaws):
         if not isinstance(yaws, (np.ndarray, list, tuple)):
             yaws = np.array([yaws])
         return yaws
-        #if not isinstance(yaws, (np.ndarray, list, tuple)):
-        #    yaws = np.array([yaws])
-        #result = []
-        #for yaw_value in yaws:
-        #    closest_yaw = None
-        #    min_diff = float('inf')  # Initialize with infinity
-        #    positive_yaw_list=self.shift_to_positive(self.yaw_list)
-        #    for yaw in positive_yaw_list:
-        #        diff = abs(yaw_value - yaw)
-        #        if diff < min_diff:
-        #            min_diff = diff
-        #            closest_yaw = yaw
-#
-        #    result.append(closest_yaw)
-        #return result
 
     def offset_scalar_real_data(self, x):
         x_shifted = self.shift_to_original(x)
@@ -318,7 +272,6 @@ class Sampler():
         x_values = np.array(x_values)  # Convert to numpy array for consistency
         if self.shift_value < 0:
             x_values += self.shift_value  # Reverse the shift to get original values
-
         return x_values
 
 class Application():
@@ -393,9 +346,6 @@ class Application():
         self.y_train_sorted = y_train_pos
         mu_star_sorted = mu_star
         var_star_sorted = var_star
-        # smoothed var_star
-        # var_star_sorted_smooth = gaussian_filter1d(var_star_sorted, sigma=1.0)
-
         # Create interpolation functions
         x_new = np.linspace(min(x_test_sorted), max(x_test_sorted), 300)  # 300 new x-points for interpolation
 
@@ -442,7 +392,6 @@ class Application():
         plt.xlabel('$yaw$')
         plt.ylabel('$acc$')
         plt.legend(loc='upper left')
-        #plt.title(  f"kernel_scale: {kernel_scale} offset_scale: {offset_scale} protection_width: {protection_width} offset_range: {offset_range}")
         plt.show()
 
     def start_sim_with_real_data(self, quantization_factor=1., offset_range=1., offset_scale=1.,
@@ -451,12 +400,10 @@ class Application():
         optimizer = opt(self.sampler.offset_scalar_real_data,quantization_factor, offset_range, offset_scale,
                             kernel_scale, protection_width, n_iterations,self.callback_plotting,plotting=plotting,deactivate_rec_scalar=deactivate_rec_scalar)
 
-
         x_train_pos = self.sampler.shift_to_positive(self.initialPoint())
         y_train_pos = np.array(self.sampler.f_discrete_real_data(x_train_pos))
         x_test = np.linspace(-45, 45, 1000)
         x_test = self.sampler.shift_to_positive(x_test)
-
 
         x_train_pos, y_train_pos, mu_star, var_star = optimizer.optimize(
             x_train_pos, y_train_pos, x_test, self.sampler.f_discrete_real_data, self.sampler.x_discrete_real_data
@@ -467,13 +414,7 @@ class Application():
         optimal_x = x_train_pos[optimal_index]
         optimal_fx = y_train_pos[optimal_index]
 
-        # Let's assume you have a method to get the number of evaluations (replace with your actual method)
-        n_eval = self.sampler.function_call_counter  # replace this with the actual function call counter
-
         cumulative_regret = optimizer.get_cumulative_regret()
-
-
-
 
         self.optimal_x=optimal_x
         self.optimal_fx=optimal_fx
@@ -537,7 +478,7 @@ def main(dbName):
     if b=='1':
         app.start_sim_with_test_data()
     if b=='0':
-        app.start_sim_with_real_data(quantization_factor=1.1,
+        app.start_sim_with_real_data(deactivate_rec_scalar=True,plotting=True,quantization_factor=1.1,
                                      kernel_scale=0.27, offset_scale= 3.0,offset_range=10., protection_width=10.
                                      ,n_iterations=10,randomseed= 524)
 
@@ -547,44 +488,13 @@ if __name__ == '__main__':
     app = Application(Sampler(Sim(dbName)))
     params = {
         'quantization_factor': 1,
-        'kernel_scale':    6.021461291655982  ,      # 0.09805098972579881,  # 2.221461291655982
-        'offset_scale':    0.003+0.003,#1153434383380036 ,  #   0.18080060285014135,  # 0.6953434383380036
-        'offset_range':    0.05+0.1  ,  # 24.979610423583395,  #  50.92663911701745
-        'protection_width':5 ,  # 0.8845792950045508,  #  3.2715701918611297
+        'kernel_scale':    6.021461291655982  ,
+        'offset_scale':    0.003+0.003,
+        'offset_range':    0.05+0.1  ,
+        'protection_width':5 ,
         'n_iterations': 20,
-        'randomseed': 524144,
+        'randomseed': 144,
         'deactivate_rec_scalar': False,
         'plotting': True
     }
     app.start_sim_with_real_data(**params)
-    #pp.plot_sampled_continuous_function()
-    # Assuming `dataObj` is an instance of a class containing the necessary data
-
-    #print(f"EEEYYYO: {app.objective_function(-5.1002523629913625)}")
-    #try:
-    #    optimized_x, optimized_y = app.find_optimum()
-    #    print(f"The optimum x is {optimized_x} with a y-value of {optimized_y}.")
-    #except Exception as e:
-    #    print(e)
-    #app.test_initial_point_destib()
-
-
-#kernel_scale, offset_scale, offset_range, protection_width
-#1.2473487599484843, 0.8723494134771395, 1.97449579471951, 0.8943425791232277
-#0.447554054788631, 0.6166671540878134, 1.1827767597819794, 1.3896017976145851
-#1.8127662488879794, 1.7151987044652088, 1.4618413070944978, 1.323077844396165
-#0.6744692108464074, 1.8199183931255214, 0.3683647542032189, 0.1461934197527197
-#1.6934223389907346, 0.6377911252356178, 1.4638262926494083, 0.2849584085177936
-#0.789657651394243, 1.5497992671697676, 1.4601827899053004, 0.9560958022380877  Minimum n_iterations: 8
-
-#1.0020241100824898, 1.5349484075858544, 1.894487226217433, 0.9397026503167679
-#1.5444524059441727, 1.4521832381957531, 1.1098114858029293, 0.8101075362927393
-
-#0.1, 0.1, 1.9307175528246223, 1.7473833988403857
-#Best parameters: 0.11069587828693686, 2.0, 1.9000839704631767, 1.0140572631449223 min_cumulative_regret_global: 1.841
-#Best parameters: 0.45813955282896857, 1.4905169514898295, 1.7480387473644574, 1.777050111996387 min_cumulative_regret_global: 1.968
-
-#Best parameters: 0.1, 2.6756556312223303, 0.9537578598527404, 10.0 min_cumulative_regret_global: 1.9437000000000004
-
-#Best parameters: 0.27613336240437925, 3.0, 10.0, 10.0 min_cumulative_regret_global: 1.9983000000000017
-#0.09805098972579881, 0.18080060285014135, 24.979610423583395, 0.8845792950045508 INSANNE lange

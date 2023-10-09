@@ -1,10 +1,5 @@
 import numpy as np
-from scipy.interpolate import interp1d
-from scipy.ndimage import gaussian_filter1d
 from scipy.stats import norm
-import matplotlib.pyplot as plt
-
-
 class Optimization:
 
     def __init__(self, get_rec_scalar,quantization_factor=1, offset_range=5, offset_scale=0.1,
@@ -22,18 +17,19 @@ class Optimization:
         self.callback_plotting=callback_plotting
         self.deactivate_rec_scalar=deactivate_rec_scalar
 
-    def expected_improvement(self, X, mu, sigma, xi=0.01):
+    def expected_improvement(self, X, mu, sigma, xi=0.01, eps=1e-1):
         mu_sample_opt = np.max(mu)
         imp = mu - mu_sample_opt - xi
-        Z = imp / sigma
-        ei = imp * norm.cdf(Z) + sigma * norm.pdf(Z)
+        Z = imp / (sigma + eps)
+        ei = imp * norm.cdf(Z) + (sigma + eps) * norm.pdf(Z)
         ei[sigma == 0.0] = 0.0
         return ei
 
     def kernel(self, a, b):
-        return np.exp(-0.1 * ((a - b) ** 2 / self.KERNEL_SCALE ** 2))
-
-
+        if self.deactivate_rec_scalar:
+            return np.exp(-0.1 * ((a - b) ** 2 /3  ** 2))
+        else:
+            return np.exp(-0.1 * ((a - b) ** 2 /6  ** 2))
 
     def perturbation(self,x_train, x, mu, width, a, y_offset):
         return (a * ((x - mu) / width) * np.exp(-((x - mu) / width) ** 2) + y_offset )
@@ -52,19 +48,9 @@ class Optimization:
         nearest_train_point = x_train[np.argmin(np.abs(x_test[:, np.newaxis] - x_train), axis=1)]
         mu = nearest_train_point
         scalar_mat=offset_scalar_func(mu)
-        if False:
-            offset_range_offset = 0#offset_range+1
-            offset_scale_offset = 0#offset_scale+1
-            return 1
-        else:
-            if self.n_iterations!=0:
-                offset_range_offset = scalar_mat *(0.01121)+0. #*(self.n_iterations/(self.n_iterations-self.iteration))+0.15#offset_range * scalar_mat 0.003+0.003
-                offset_scale_offset = abs( scalar_mat) *(0.00015251) +0.#*(self.n_iterations/(self.n_iterations-self.iteration))+0.015#-offset_scale * scalar_mat 0.05+0.1
-            else:
-                offset_range_offset = scalar_mat *(0.11121)
-                offset_scale_offset = abs(scalar_mat) * (0.01251)
-        protection_term = self.protection_function(x_test, mu, protection_width=10)
-        return self.perturbation(x_train,x_test, mu, offset_range_offset, offset_scale_offset, 0) #* protection_term
+        offset_range_offset = scalar_mat *(0.01121)
+        offset_scale_offset = abs( scalar_mat) *(0.00015251)
+        return self.perturbation(x_train,x_test, mu, offset_range_offset, offset_scale_offset, 0)
 
     def predict(self, x_train, y_train, x_test, kernel, x_discrete, offset_range=None, offset_scale=None,
                 protection_width=None):
@@ -113,11 +99,7 @@ class Optimization:
             self.regrets.append(regret)  # Add it to the regret history
             x_train = np.append(x_train, x_next)
             y_train = np.append(y_train, y_next)
-            #print(f"Iteration {iteration + 1}: x_next = {x_next}, y_next = {y_next}, regret = {regret}")
             mu_star, var_star = self.predict(x_train, y_train, x_test, self.kernel, x_discrete)
-            #smoothing
-            #var_star = gaussian_filter1d(var_star, sigma=1.0)
-            #mu_star = gaussian_filter1d(mu_star, sigma=1.0)
             if self.plotting:
                 self.callback_plotting(x_test,x_train,y_train, mu_star, var_star)
         return x_train, y_train, mu_star, var_star

@@ -8,7 +8,7 @@ from skopt import gp_minimize
 from skopt.space import Real
 import numpy as np
 from RS_BO.Utility.Sim import Sim
-from Application import Application, Sampler
+from RS_BO.Application import Application, Sampler
 
 class AnnealingSearch(Annealer):
     def __init__(self, state, app):
@@ -56,8 +56,8 @@ class SimAnnealSearch(RandomSearch):
     def anneal_search(self,Tmax,Tmin, bounds, iter):
         initial_state = np.random.uniform(*bounds)
         annealer = AnnealingSearch(initial_state, self.app)
-        annealer.Tmax =Tmax#6389972 #6389972#25000.0#40.053609667034365#5.55440115545034#6.831956948536803#3#2.1195791740292957#10000#
-        annealer.Tmin =Tmin#3910#1#1000000#4.273021838540448 #0.1016562260320483#0.10521097746714816#0.5#0.49614060915361824 #1000#
+        annealer.Tmax =Tmax
+        annealer.Tmin =Tmin
         annealer.steps = iter
         state, e ,eval_points= annealer.anneal()
         eval_points = np.array(eval_points)
@@ -67,36 +67,39 @@ class SimAnnealSearch(RandomSearch):
         max_found_y = -e
         return max_found_y, cum_reg,eval_points
 
-    def for_range_of_iter(self,Tmax=5  ,Tmin=1,early_stop_threshold=100, enable_plot=False):
+    def calc_variance(self, max_found_y_array):
+        # Convert list of arrays to 2D numpy array and compute variance along rows
+        return np.var(np.array(max_found_y_array), axis=0)
+
+    def for_range_of_iter(self, Tmax=5, Tmin=1, early_stop_threshold=100, enable_plot=False):
         total_fxs = np.zeros(self.maxiter + 1)
         total_cum_regret = np.zeros(self.maxiter + 1)
-        var_fxs = []
-        fxs_array = np.zeros((self.n_repeats, self.maxiter + 1))
+        var_fxs_array = []
 
+        # Loop over multiple runs for statistical stability
         for run in range(self.n_repeats):
-            #print("next run")
-            state, e, eval_points = self.anneal_search(Tmax,Tmin,[0, 90], self.maxiter)
+            state, e, eval_points = self.anneal_search(Tmax, Tmin, [0, 90], self.maxiter)
+            # Convert eval_points to numpy array for easier manipulation
             eval_points = np.array(eval_points)
-            optima_over_iter = np.maximum.accumulate(eval_points)            # Padding
-            #if len(eval_points) < self.maxiter + 1:
-            #    eval_points = np.pad(eval_points, (0, self.maxiter + 1 - len(eval_points)), 'constant')
-
-            # Storing individual runs for variance computation
-            fxs_array[run, :len(eval_points)] = eval_points
-
+            # Fetch global optimum for regret calculation
             global_optimum = self.app.sampler.getGlobalOptimum_Y()
-            regrets = np.abs(optima_over_iter - global_optimum)
+            # Find the best (maximum) evaluated points up to each index
+            max_found_ys = np.maximum.accumulate(eval_points)
+            # Append the max_found_ys array for each run to var_fxs_array
+            var_fxs_array.append(max_found_ys)
+            # Calculate regret for each evaluation
+            regrets = np.abs(eval_points - global_optimum)
+            # Calculate the cumulative regret
             cum_regret = np.cumsum(regrets)
-
-            # Accumulating fxs and regrets
-            total_fxs = total_fxs[:len(optima_over_iter)] + optima_over_iter
+            # Update the accumulators
+            total_fxs[:len(max_found_ys)] += max_found_ys  # Fixed the slice to be up to the length of max_found_ys
             total_cum_regret += cum_regret
+        # Calculate the variance for each iteration across all runs
+        var_fxs = self.calc_variance(var_fxs_array)
 
-        # Average and variance calculations
+        # Calculate the average values and variance
         avg_fxs = total_fxs / self.n_repeats
         average_cum_regret = total_cum_regret / self.n_repeats
-        var_fxs = np.var(fxs_array, axis=0)
-
         return avg_fxs, average_cum_regret, var_fxs
 
 # Update the objective function

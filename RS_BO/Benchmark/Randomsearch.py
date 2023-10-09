@@ -4,7 +4,7 @@ import time
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-from Application import Application, Sampler
+from RS_BO.Application import Application, Sampler
 from RS_BO.Utility.Sim import Sim
 
 class RandomSearch:
@@ -25,13 +25,7 @@ class RandomSearch:
             y_value = self.app.sampler.f_discrete_real_data(np.array([x_value]))
             y_value = y_value[0]
             max_found_y = max(max_found_y, y_value)
-            cum_reg+= abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())
-            #print(f"iter{iter} y_value{y_value} max_found_y{max_found_y}  i{i} cum_reg{cum_reg} reg{abs(max_found_y - self.app.sampler.getGlobalOptimum_Y())}")
-
-            #print(f"Single iteration max_found_y: {max_found_y}")
-
-            #global_max = self.app.sampler.getGlobalOptimum_Y()
-            #percentage_close = (max_found_y / global_max) * 100
+            cum_reg+= abs(y_value - self.app.sampler.getGlobalOptimum_Y())
 
         return max_found_y ,cum_reg # Just return max_found_y here
 
@@ -69,15 +63,11 @@ class RandomSearch:
             avg_cum_reg /= self.n_repeats
             average_optimal_fxs.append(avg_optimal_fx)  # Directly append to list
             average_cumregs.append(avg_cum_reg)
-
-        #if enable_plot:
-            #self.plot_data([i[0] for i in average_optimal_fxs], [i[1] for i in average_optimal_fxs])
         return average_optimal_fxs,average_cumregs,var_fxs
 
     def test(self, iteration, num_executions):
         self.app = Application(Sampler(Sim("Testdata")))
         optimal_values = []
-
         # Execute the algorithm multiple times and store optimal_values
         for _ in range(num_executions):
             optimal_value, reg = self.random_search([0, 90], iteration)
@@ -105,10 +95,6 @@ class RandomSearch:
         plt.title('Probability Distribution of Optimal Values')
         plt.show()
 
-
-# Example usage
-
-
 def main(app,maxiter,n_repeats):
     rs = RandomSearch(app, maxiter+1, n_repeats)
     return rs.for_range_of_iter()
@@ -117,5 +103,4 @@ if __name__ == '__main__':
     app = Application(Sampler(Sim("Testdata")))
     rs = RandomSearch(app, 0 + 1, 1)
     rs.test(iteration = 1,num_executions = 1000)
-    #print(f"FINAL RESULTS RANDOMSEARCH: {main(app,0,1111)}")
 

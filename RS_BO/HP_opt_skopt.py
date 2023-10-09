@@ -3,17 +3,12 @@ from skopt import gp_minimize
 from skopt.space import Real
 import numpy as np
 from RS_BO.Utility.Sim import Sim
-from Application import Application, Sampler
+from RS_BO.Application import Application, Sampler
 import random
 import time
 
 min_cumulative_regret_global = float('inf')
-data = Sampler(Sim())
-class MyApp:
-    def start_optimization(self, quantization_factor, offset_range, offset_scale, kernel_scale, protection_width,
-                           n_iterations):
-        return np.random.rand() * 10
-
+data = Sampler(Sim("TestData"))
 def objective(params):
     kernel_scale, offset_scale, offset_range, protection_width = params
     n_iterations_start = 10
@@ -35,11 +30,10 @@ space = [
     Real(0.005, 1.0, name="kernel_scale"),
     Real(0.01, 1.0, name="offset_scale"),
     Real(20, 50.0, name="offset_range"),
-    Real(0.05, 2.0, name="protection_width")
 ]
 
 n_calls = 1000
-x0 = [[0.09805098972579881, 0.18080060285014135, 24.979610423583395, 0.8845792950045508]]
+x0 = [[0.09805098972579881, 0.18080060285014135, 24.979610423583395]]
 
 # Wrap the gp_minimize call with tqdm to add a progress bar
 with tqdm(total=n_calls, desc="Optimizing", bar_format="{l_bar}{bar} [ time left: {remaining} ]") as pbar:
