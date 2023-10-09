@@ -1,0 +1,4 @@
+To run the code the requirements.txt file defines the dependencies.
+The code is only tested on Linux systems.
+To run the Benchmarking, the Postgres database needs to be filled with data from the Flowregime python project.
+To run the Benchmarking, run the Benchmaking.py main function. This will call the benchmarking alorithms.
